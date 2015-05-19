@@ -1,0 +1,12 @@
+INSTRUCTIONS
+
+This is a default Tucano project.
+
+To compile:
+	on root dir:
+		cmake .
+		make
+
+If anything is not found by cmake, open CMakeCache.txt and edit the paths that weren't found.
+You may have to add eigen or glew to your LD_LIBRARY_PATH. You can do it by adding:
+export LD_LIBRARY_PATH = "path/to/target/libs/folder/in/quotes"
