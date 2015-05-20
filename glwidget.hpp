@@ -65,10 +65,14 @@ public slots:
 
 private:
     //VARIABLES
+    
+    ///camera in use
     cv::VideoCapture* camera;
     
+    ///frame where we read the camera frames to
     cv::Mat frame;
     
+    ///if we want to get another camera, call findWorkingCam starting from here
     int nextCameraIndex;
 
     /// Render image effect (simply renders a texture)
@@ -80,15 +84,39 @@ private:
     /// Texture to hold input image
     Texture frameTexture;
 
-    ///Frame Texture's index:
-    //Gluint frameTextureID;
+    /// Region of interest parameters
+    Eigen::Vector2f ROIcorner; //where the rectangle begins
+    Eigen::Vector2f ROIspread; //how far does it spread in each axis
 
     //FUNCTIONS
     int findWorkingCam(cv::VideoCapture** targetCamera, int starter);
 
 protected:
 
-    //events go in here    
+    //events go in here 
+    /**
+     * @brief Callback for mouse press event.
+     *
+     * The mouse press starts a rotation or a translation if Shift is pressed.
+     * @param event The mouse event that triggered the callback.
+     */
+    void mousePressEvent (QMouseEvent * event);
+
+    /**
+     * @brief Callback for mouse move event.
+     *
+     * If rotating or translating, this method updates the trackball position.
+     * @param event The mouse event that triggered the callback.
+     */
+    void mouseMoveEvent (QMouseEvent * event);
+
+    /**
+     * @brief Callback for mouse release event.
+     *
+     * Stops rotation or translation.
+     * @param event The mouse event that triggered the callback.
+     */
+    void mouseReleaseEvent (QMouseEvent * event);
 
 };
 

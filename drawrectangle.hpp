@@ -75,7 +75,11 @@ public:
 
         shader.bind();
         shader.setUniform("warpMatrix", warpQuad);
+        GLint previousMode;
+        glGetIntegerv(GL_POLYGON_MODE, &previousMode);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         quad.render();
+        glPolygonMode(GL_FRONT_AND_BACK, previousMode);
 
         shader.unbind();
     }
@@ -85,12 +89,14 @@ public:
         warpQuad = Eigen::Matrix4f::Zero();
 
         //Scale
-        warpQuad(0,0) = (*spread)[0]; //x
-        warpQuad(1,1) = (*spread)[1]; //y
+        warpQuad(0,0) = (*spread)[0]-(*firstCorner)[0]; //x
+        warpQuad(1,1) = (*spread)[1]-(*firstCorner)[1]; //y
         warpQuad(2,2) = 1;
         //Translation
-        warpQuad(0,3) = (*firstCorner)[0]; //x
-        warpQuad(1,3) = (*firstCorner)[1]; //y
+        warpQuad(0,3) = (*firstCorner)[0] - 0.5; //x
+        warpQuad(1,3) = (*firstCorner)[1] - 0.5; //y
+        //uniform matrix value
+        warpQuad(3,3) = 1;
     }
 
 private:

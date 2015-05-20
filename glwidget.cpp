@@ -9,6 +9,9 @@ GLWidget::GLWidget(QWidget *parent) : Tucano::QtPlainWidget(parent)
     //frame = NULL;
     nextCameraIndex = 0;
     maxCamIndex = 10;
+
+    ROIcorner = Eigen::Vector2f(0,0);
+    ROIspread = Eigen::Vector2f(1,1);
 }
 
 GLWidget::~GLWidget()
@@ -121,9 +124,91 @@ void GLWidget::paintGL (void)
     Eigen::Vector2i viewport (this->width(), this->height());
     rendertexture.renderTexture(frameTexture, viewport);
 
-    Eigen::Vector2f firstCorner (0.3,0.3);
-    Eigen::Vector2f spread (0.2,0.2);
-    rect.renderTexture(viewport, firstCorner, spread);
+    //Eigen::Vector2f firstCorner (0.3,0.3);
+    //Eigen::Vector2f spread (0.2,0.2);
+    rect.renderTexture(viewport, ROIcorner, ROIspread);
 
     update();
+}
+
+/**
+* @brief Callback for mouse press event.
+*
+* The mouse press starts a rotation or a translation if Shift is pressed.
+* @param event The mouse event that triggered the callback.
+*/
+void GLWidget::mousePressEvent (QMouseEvent * event)
+{
+    setFocus ();
+    Eigen::Vector2f screen_pos ((float)event->x()/this->width(), (float)event->y()/this->height());
+    if (event->modifiers() & Qt::ShiftModifier)
+    {
+        //if (event->button() == Qt::LeftButton)
+        //{
+        //    camera.translateCamera(screen_pos);
+        //}
+    }
+    else
+    {
+        if (event->button() == Qt::LeftButton)
+        {
+            ROIcorner = screen_pos;
+        }
+        if (event->button() == Qt::RightButton)
+        {
+            //ROIspread = screen_pos - ROIcorner;
+        }
+    }
+    //updateGL ();
+    std::cout<<ROIcorner[0]<<","<<ROIcorner[1]<<" & "<<ROIspread[0]<<","<<ROIspread[1]<<std::endl;
+}
+
+/**
+ * @brief Callback for mouse move event.
+ *
+ * If rotating or translating, this method updates the trackball position.
+ * @param event The mouse event that triggered the callback.
+ */
+void GLWidget::mouseMoveEvent (QMouseEvent * event)
+{
+    Eigen::Vector2f screen_pos ((float)event->x()/this->width(), (float)event->y()/this->height());
+    if (event->modifiers() & Qt::ShiftModifier && event->buttons() & Qt::LeftButton)
+    {
+        //camera.translateCamera(screen_pos);
+    }
+    else
+    {
+        if (event->buttons() & Qt::LeftButton)
+        {
+            ROIspread = screen_pos - ROIcorner;
+        }
+        if (event->buttons() & Qt::RightButton)
+        {
+            //light_trackball.rotateCamera(screen_pos);
+        }
+    }
+
+    //updateGL ();
+
+}
+
+/**
+ * @brief Callback for mouse release event.
+ *
+ * Stops rotation or translation.
+ * @param event The mouse event that triggered the callback.
+ */
+void GLWidget::mouseReleaseEvent (QMouseEvent * event)
+{
+    Eigen::Vector2f screen_pos ((float)event->x()/this->width(), (float)event->y()/this->height());
+    if (event->button() == Qt::LeftButton)
+    {
+        ROIspread = screen_pos - ROIcorner;
+    }
+    if (event->button() == Qt::RightButton)
+    {
+        //light_trackball.endRotation();
+    }
+
+    //updateGL ();
 }
