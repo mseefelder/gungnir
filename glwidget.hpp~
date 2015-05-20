@@ -3,10 +3,9 @@
 
 #include <rendertexture.hpp>
 #include <utils/qtplainwidget.hpp>
-#include <opencv/cv.hpp>
+#include <opencv/cv.h>
 #include <highgui.h>
 #include "cameraexception.hpp"
-#include "drawrectangle.hpp"
 
 using namespace std;
 
@@ -19,9 +18,6 @@ protected:
     
     /// Is initialized
     bool initd;
-
-    /// Is on RoI setting mode
-    bool markROI;
 
     // Rendering quad
     Tucano::Mesh *quad;
@@ -73,9 +69,6 @@ private:
 
     /// Render image effect (simply renders a texture)
     Effects::RenderTexture rendertexture;
-
-    /// Render image effect (simply renders a texture)
-    Effects::drawRectangle rect;
 
     /// Texture to hold input image
     Texture frameTexture;

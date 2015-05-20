@@ -4,6 +4,7 @@
 GLWidget::GLWidget(QWidget *parent) : Tucano::QtPlainWidget(parent)
 {
 	initd = false;
+	markROI = true;
 	camera = NULL;
     //frame = NULL;
     nextCameraIndex = 0;
@@ -38,6 +39,8 @@ void GLWidget::initialize (void)
 
     rendertexture.setShadersDir(shaders_dir);
     rendertexture.initialize();
+    rect.setShadersDir(shaders_dir);
+    rect.initialize();
 
     //temporary
     std::cout<<"Reading frame..."<<std::endl;
@@ -117,6 +120,10 @@ void GLWidget::paintGL (void)
     // so it may not be scaled correctly with the image's size (just to keep the example simple)
     Eigen::Vector2i viewport (this->width(), this->height());
     rendertexture.renderTexture(frameTexture, viewport);
+
+    Eigen::Vector2f firstCorner (0.3,0.3);
+    Eigen::Vector2f spread (0.2,0.2);
+    rect.renderTexture(viewport, firstCorner, spread);
 
     update();
 }
