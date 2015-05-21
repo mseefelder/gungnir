@@ -57,8 +57,6 @@ public:
     {
 		loadShader(shader, "rectangle");
         quad.createQuad();
-        Eigen::Vector2f firstCorner (1.0, 1.0);
-        Eigen::Vector2f spread (1.0, 1.0);
     }
 
     /**
@@ -89,12 +87,13 @@ public:
         warpQuad = Eigen::Matrix4f::Zero();
 
         //Scale
-        warpQuad(0,0) = (*spread)[0]-(*firstCorner)[0]; //x
-        warpQuad(1,1) = (*spread)[1]-(*firstCorner)[1]; //y
+        scale << abs((*spread)[0]-(*firstCorner)[0])/2.0, abs((*spread)[1]-(*firstCorner)[1])/2.0;
+        warpQuad(0,0) = scale[0];//-(*firstCorner)[0]; //x
+        warpQuad(1,1) = scale[1];//-(*firstCorner)[1]; //y
         warpQuad(2,2) = 1;
         //Translation
-        warpQuad(0,3) = (*firstCorner)[0] - 0.5; //x
-        warpQuad(1,3) = (*firstCorner)[1] - 0.5; //y
+        warpQuad(0,3) = (*firstCorner)[0] + (scale[0]);//(2*(*firstCorner)[0]-1.0) + (scale[0]);//(0.25 + (*firstCorner)[0])-0.5; //x OK
+        warpQuad(1,3) = (*firstCorner)[1] - (scale[1]);//(-2*(*firstCorner)[1]+1.0) - (scale[1]);//((1.0-(*firstCorner)[1])-0.25)-0.5; //y
         //uniform matrix value
         warpQuad(3,3) = 1;
     }
@@ -109,6 +108,7 @@ private:
 
     /// Matrix to scale and translate the quad on screen coordinates
     Eigen::Matrix4f warpQuad;
+    Eigen::Vector2f scale;
 };
 
 }

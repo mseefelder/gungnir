@@ -10,8 +10,8 @@ GLWidget::GLWidget(QWidget *parent) : Tucano::QtPlainWidget(parent)
     nextCameraIndex = 0;
     maxCamIndex = 10;
 
-    ROIcorner = Eigen::Vector2f(0,0);
-    ROIspread = Eigen::Vector2f(1,1);
+    ROIcorner = Eigen::Vector2f(0.0,0.0);
+    ROIspread = Eigen::Vector2f(0.0,0.0);
 }
 
 GLWidget::~GLWidget()
@@ -140,7 +140,11 @@ void GLWidget::paintGL (void)
 void GLWidget::mousePressEvent (QMouseEvent * event)
 {
     setFocus ();
-    Eigen::Vector2f screen_pos ((float)event->x()/this->width(), (float)event->y()/this->height());
+    Eigen::Vector2f screen_pos (
+        ((2*((float)event->x()/this->width()))-1.0)
+        , 
+        ((-2*((float)event->y()/this->height()))+1.0)
+        );
     if (event->modifiers() & Qt::ShiftModifier)
     {
         //if (event->button() == Qt::LeftButton)
@@ -171,7 +175,11 @@ void GLWidget::mousePressEvent (QMouseEvent * event)
  */
 void GLWidget::mouseMoveEvent (QMouseEvent * event)
 {
-    Eigen::Vector2f screen_pos ((float)event->x()/this->width(), (float)event->y()/this->height());
+    Eigen::Vector2f screen_pos (
+        ((2*((float)event->x()/this->width()))-1.0)
+        , 
+        ((-2*((float)event->y()/this->height()))+1.0)
+        );
     if (event->modifiers() & Qt::ShiftModifier && event->buttons() & Qt::LeftButton)
     {
         //camera.translateCamera(screen_pos);
@@ -180,7 +188,8 @@ void GLWidget::mouseMoveEvent (QMouseEvent * event)
     {
         if (event->buttons() & Qt::LeftButton)
         {
-            ROIspread = screen_pos - ROIcorner;
+            ROIspread = screen_pos;// - ROIcorner;
+            //ROIcorner = screen_pos;
         }
         if (event->buttons() & Qt::RightButton)
         {
@@ -200,10 +209,14 @@ void GLWidget::mouseMoveEvent (QMouseEvent * event)
  */
 void GLWidget::mouseReleaseEvent (QMouseEvent * event)
 {
-    Eigen::Vector2f screen_pos ((float)event->x()/this->width(), (float)event->y()/this->height());
+    Eigen::Vector2f screen_pos (
+        ((2*((float)event->x()/this->width()))-1.0)
+        , 
+        ((-2*((float)event->y()/this->height()))+1.0)
+        );
     if (event->button() == Qt::LeftButton)
     {
-        ROIspread = screen_pos - ROIcorner;
+        ROIspread = screen_pos;// - ROIcorner;
     }
     if (event->button() == Qt::RightButton)
     {
