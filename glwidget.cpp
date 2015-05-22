@@ -225,3 +225,7 @@ void GLWidget::mouseReleaseEvent (QMouseEvent * event)
 
     //updateGL ();
 }
+
+/*
+http://www.stat.wisc.edu/~mchung/teaching/MIA/reading/diffusion.gaussian.kernel.pdf.pdf
+*/
