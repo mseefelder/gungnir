@@ -5,6 +5,8 @@ GLWidget::GLWidget(QWidget *parent) : Tucano::QtPlainWidget(parent)
 {
 	initd = false;
 	markROI = true;
+    regionDefined = false;
+    qValueReady = false;
 	camera = NULL;
     //frame = NULL;
     nextCameraIndex = 0;
@@ -54,7 +56,8 @@ void GLWidget::initialize (void)
 	std::cout<<"Frame has been flipped! Converting to texture..."<<std::endl;
 
 	//frameTextureID = frameTexture.create(GL_TEXTURE_2D, GL_RGB, frame.cols, frame.rows, GL_BGR, GL_UNSIGNED_BYTE, frame.ptr());
-	frameTexture.create(GL_TEXTURE_2D, GL_RGB, frame.cols, frame.rows, GL_BGR, GL_UNSIGNED_BYTE, frame.ptr());
+    frameTexture = new Tucano::Texture();
+	frameTexture->create(GL_TEXTURE_2D, GL_RGB, frame.cols, frame.rows, GL_BGR, GL_UNSIGNED_BYTE, frame.ptr());
 	std::cout<<"Frame is now on the GPU!"<<std::endl;
     //temporary
 
@@ -116,13 +119,27 @@ void GLWidget::paintGL (void)
     //*camera >> frame;
     camera->read(frame);
 	cv::flip(frame, frame, 0);
-	frameTexture.create(GL_TEXTURE_2D, GL_RGB, frame.cols, frame.rows, GL_BGR, GL_UNSIGNED_BYTE, frame.ptr());
+	frameTexture->create(GL_TEXTURE_2D, GL_RGB, frame.cols, frame.rows, GL_BGR, GL_UNSIGNED_BYTE, frame.ptr());
 	
 
 	// renders the given image, not that we are setting a fixed viewport that follows the widgets size
     // so it may not be scaled correctly with the image's size (just to keep the example simple)
     Eigen::Vector2i viewport (this->width(), this->height());
-    rendertexture.renderTexture(frameTexture, viewport);
+    rendertexture.renderTexture(*frameTexture, viewport);
+
+    if(regionDefined){
+        if(!qValueReady)
+        {
+            meanShift.setRegionDimensionsAndCenter(viewport, ROIcorner, ROIspread);
+            meanShift.histogramQ(frameTexture);
+            qValueReady = true;
+        }
+        else
+        {
+            meanShift.histogramP(frameTexture);
+            meanShift.meanshift(&ROIcorner, &ROIspread);
+        }
+    }
 
     //Eigen::Vector2f firstCorner (0.3,0.3);
     //Eigen::Vector2f spread (0.2,0.2);
@@ -145,26 +162,20 @@ void GLWidget::mousePressEvent (QMouseEvent * event)
         , 
         ((-2*((float)event->y()/this->height()))+1.0)
         );
-    if (event->modifiers() & Qt::ShiftModifier)
-    {
-        //if (event->button() == Qt::LeftButton)
-        //{
-        //    camera.translateCamera(screen_pos);
-        //}
-    }
+
+    if (event->modifiers() & Qt::ShiftModifier){}
     else
     {
         if (event->button() == Qt::LeftButton)
         {
-            ROIcorner = screen_pos;
+            if(markROI) ROIcorner = screen_pos;
         }
         if (event->button() == Qt::RightButton)
         {
-            //ROIspread = screen_pos - ROIcorner;
+
         }
     }
-    //updateGL ();
-    std::cout<<ROIcorner[0]<<","<<ROIcorner[1]<<" & "<<ROIspread[0]<<","<<ROIspread[1]<<std::endl;
+    //std::cout<<ROIcorner[0]<<","<<ROIcorner[1]<<" & "<<ROIspread[0]<<","<<ROIspread[1]<<std::endl;
 }
 
 /**
@@ -180,25 +191,18 @@ void GLWidget::mouseMoveEvent (QMouseEvent * event)
         , 
         ((-2*((float)event->y()/this->height()))+1.0)
         );
-    if (event->modifiers() & Qt::ShiftModifier && event->buttons() & Qt::LeftButton)
-    {
-        //camera.translateCamera(screen_pos);
-    }
+
+    if (event->modifiers() & Qt::ShiftModifier && event->buttons() & Qt::LeftButton){}
     else
     {
         if (event->buttons() & Qt::LeftButton)
         {
-            ROIspread = screen_pos;// - ROIcorner;
-            //ROIcorner = screen_pos;
+            if(markROI) ROIspread = screen_pos;
         }
         if (event->buttons() & Qt::RightButton)
         {
-            //light_trackball.rotateCamera(screen_pos);
         }
     }
-
-    //updateGL ();
-
 }
 
 /**
@@ -214,16 +218,21 @@ void GLWidget::mouseReleaseEvent (QMouseEvent * event)
         , 
         ((-2*((float)event->y()/this->height()))+1.0)
         );
+
     if (event->button() == Qt::LeftButton)
     {
-        ROIspread = screen_pos;// - ROIcorner;
+        if(markROI) 
+        {
+            ROIspread = screen_pos;
+            regionDefined = true;
+            qValueReady = false;
+            markROI = false;
+        }
     }
     if (event->button() == Qt::RightButton)
     {
-        //light_trackball.endRotation();
+        
     }
-
-    //updateGL ();
 }
 
 /*

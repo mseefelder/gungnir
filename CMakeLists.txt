@@ -114,6 +114,7 @@ set(
   ${GUNGNIR_DIR}/glwidget.hpp
   ${GUNGNIR_DIR}/cameraexception.hpp
   ${GUNGNIR_DIR}/drawrectangle.hpp
+  ${GUNGNIR_DIR}/meanshiftshader.hpp
   )
 
 qt5_wrap_ui(

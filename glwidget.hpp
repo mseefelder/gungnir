@@ -7,6 +7,7 @@
 #include <highgui.h>
 #include "cameraexception.hpp"
 #include "drawrectangle.hpp"
+#include "meanshiftshader.hpp"
 
 using namespace std;
 
@@ -22,6 +23,10 @@ protected:
 
     /// Is on RoI setting mode
     bool markROI;
+
+    bool regionDefined;
+
+    bool qValueReady;
 
     // Rendering quad
     Tucano::Mesh *quad;
@@ -55,6 +60,7 @@ public:
     void resizeGL(int w, int h)
     {
         glViewport(0, 0, this->width(), this->height());
+        viewport = Eigen::Vector2i(this->width(), this->height());
 
         updateGL();
     }
@@ -81,12 +87,15 @@ private:
     /// Render image effect (simply renders a texture)
     Effects::drawRectangle rect;
 
+    Effects::Meanshift meanShift;
+
     /// Texture to hold input image
-    Texture frameTexture;
+    Tucano::Texture* frameTexture;
 
     /// Region of interest parameters
     Eigen::Vector2f ROIcorner; //where the rectangle begins
     Eigen::Vector2f ROIspread; //how far does it spread in each axis
+    Eigen::Vector2i viewport;
 
     //FUNCTIONS
     int findWorkingCam(cv::VideoCapture** targetCamera, int starter);
