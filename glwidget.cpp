@@ -46,6 +46,8 @@ void GLWidget::initialize (void)
     rendertexture.initialize();
     rect.setShadersDir(shaders_dir);
     rect.initialize();
+    meanShift.setShadersDir(shaders_dir);
+    meanShift.initialize();
 
     //temporary
     std::cout<<"Reading frame..."<<std::endl;

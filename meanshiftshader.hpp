@@ -60,8 +60,8 @@ public:
         frameViewport = viewport;
 
         regionDimensions = Eigen::Vector2f(
-            (spread[0]-firstCorner[0]),
-            (spread[1]-firstCorner[1])
+            abs((spread[0]-firstCorner[0])),
+            abs((spread[1]-firstCorner[1]))
         );
 
         center = Eigen::Vector2f(
@@ -70,21 +70,21 @@ public:
         );
 
         //Setup fbo for Region of Interest and Line for summing
-        regionFbo = new Tucano::Framebuffer(regionDimensions[0], regionDimensions[0], 1, GL_TEXTURE_2D, GL_RGBA32F, GL_RGBA, GL_FLOAT);
+        regionFbo = new Tucano::Framebuffer(regionDimensions[0]*frameViewport[0], regionDimensions[1]*frameViewport[1], 1, GL_TEXTURE_2D, GL_RGBA32F, GL_RGBA, GL_UNSIGNED_BYTE);
             // (red_bin, green_bin, blue_bin, value)
-        meanShiftFbo = new Tucano::Framebuffer(regionDimensions[0], regionDimensions[0], 1, GL_TEXTURE_2D, GL_RGBA32F, GL_RGBA, GL_FLOAT);
+        meanShiftFbo = new Tucano::Framebuffer(regionDimensions[0]*frameViewport[0], regionDimensions[1]*frameViewport[1], 1, GL_TEXTURE_2D, GL_RGBA32F, GL_RGBA, GL_UNSIGNED_BYTE);
             // (xvalue, yvalue, divider to sum, nothing)
 
         if(regionDimensions[0] >= regionDimensions[1])
         {
-            lineFbo = new Tucano::Framebuffer(regionDimensions[0], 1, 1, GL_TEXTURE_2D, GL_RGBA32F, GL_RGBA, GL_FLOAT);
-            lineSize = regionDimensions[0];
+            lineFbo = new Tucano::Framebuffer(regionDimensions[0]*frameViewport[0], 1, 1, GL_TEXTURE_2D, GL_RGBA32F, GL_RGBA, GL_UNSIGNED_BYTE);
+            lineSize = regionDimensions[0]*frameViewport[0];
             widthIsMax = true;
         }
         else
         {
-            lineFbo = new Tucano::Framebuffer(regionDimensions[1], 1, 1, GL_TEXTURE_2D, GL_RGBA32F, GL_RGBA, GL_FLOAT);
-            lineSize = regionDimensions[1];
+            lineFbo = new Tucano::Framebuffer(regionDimensions[1]*frameViewport[1], 1, 1, GL_TEXTURE_2D, GL_RGBA32F, GL_RGBA, GL_UNSIGNED_BYTE);
+            lineSize = regionDimensions[1]*frameViewport[1];
             widthIsMax = false;
         }
 
@@ -98,6 +98,7 @@ public:
 
     virtual void histogram (Tucano::Texture* frame, Tucano::Texture* hTex)
     {
+        std::cout<<"histogram: Calculate pixel values"<<std::endl;
         //Calculate pixel values-------------------------------------------------
 
         //bind regionFbo
@@ -118,6 +119,7 @@ public:
 
         regionFbo->unbind();
 
+        std::cout<<"histogram: Sum up histogram to one line"<<std::endl;
         //Sum up histogram to one line-------------------------------------------
         lineFbo->clearAttachments();
         lineFbo->bindRenderBuffer(0);
@@ -134,11 +136,14 @@ public:
         (regionFbo->getTexture(0))->unbind();
         lineFbo->unbind();
 
+        std::cout<<"histogram: CPU: sum up and build histogram to texture"<<std::endl;
         //CPU: sum up and build histogram to texture-----------------------------
         
+        std::cout<<"histogram: clean histogramRaw array"<<std::endl;
         //clean histogramRaw array
         for (int i = 0; i < NBINS*3; ++i)
         {
+            std::cout<<i<<std::endl;
             histogramRaw[i] = 0.0;
         }
 
@@ -147,9 +152,11 @@ public:
         float divider = 0.0;
         int bin[3];
         
+        std::cout<<"histogram: read first pixel."<<std::endl;
         temp = lineFbo->readPixel(0, Eigen::Vector2i(0, 0));
 
-        //
+        std::cout<<"histogram: calculate the first histogram values"<<std::endl;
+        //calculate the first histogram values
         divider = temp[3];
         bin[0] = (int) (3*floor(temp[0]));
         histogramRaw[bin[0]] += temp[3];
@@ -158,24 +165,36 @@ public:
         bin[2] = (int) (3*floor(temp[2])+2);
         histogramRaw[bin[2]] += temp[3];
 
+        std::cout<<"histogram: calculate the rest of the histogram values"<<std::endl;
+        std::cout<<"lineSize: "<<lineSize<<std::endl;
+        //calculate the rest of the histogram values
         for (int j = 1; j < lineSize; ++j)
         {
+            std::cout<<j<<std::endl;
+
             temp = lineFbo->readPixel(0, Eigen::Vector2i(lineSize, 0));
 
             divider += temp[3];
             bin[0] = (int) (3*floor(temp[0]));
-            histogramRaw[bin[0]] += temp[3];
             bin[1] = (int) (3*floor(temp[1])+1);
-            histogramRaw[bin[1]] += temp[3];
             bin[2] = (int) (3*floor(temp[2])+2);
+            
+            std::cout<<"pixel values"<<temp[0]<<" "<<temp[1]<<" "<<temp[2]<<std::endl;
+            std::cout<<"bins"<<bin[0]<<" "<<bin[1]<<" "<<bin[2]<<std::endl;
+
+            histogramRaw[bin[0]] += temp[3];
+            histogramRaw[bin[1]] += temp[3];
             histogramRaw[bin[2]] += temp[3];
         }
 
+        std::cout<<"histogram: divide all histogram values"<<std::endl;
+        //divide all histogram values
         for (int k = 0; k < NBINS*3; ++k)
         {
             histogramRaw[k] /= divider;
         }
 
+        std::cout<<"histogram: CPU: sum up and build histogram to texture"<<std::endl;
         //update hTex with histogramRaw
         hTex->update(histogramRaw);
     }
