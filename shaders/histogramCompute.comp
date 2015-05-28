@@ -1,0 +1,61 @@
+#version 430
+layout (rgba32f) uniform image2D region;
+layout (r32f) uniform image2D histogram;
+uniform ivec2 dimensions;
+layout (local_size_x = 3, local_size_y = 16, local_size_z = 1) in;
+
+//gl_LocalInvocationID
+
+
+void main() {
+    float value = 0.0;
+    vec4 bin;
+
+    int i = 0;
+    int j = 0;
+    if (gl_LocalInvocationID.x == 0)
+    {
+        for (i=0; i<dimensions.x; i++)
+        {
+            for (j=0; j<dimensions.y; j++)
+            {
+                bin = imageLoad(region, ivec2(i, j));
+                if(int(bin.r) == gl_LocalInvocationID.y)
+                {
+                    value += bin.a;
+                }
+            }
+        }
+    }
+    else if (gl_LocalInvocationID.x == 1)
+    {
+        for (i=0; i<dimensions.x; i++)
+        {
+            for (j=0; j<dimensions.y; j++)
+            {
+                bin = imageLoad(region, ivec2(i, j));
+                if(int(bin.g) == gl_LocalInvocationID.y)
+                {
+                    value += bin.a;
+                }
+            }
+        }
+    }
+    else if (gl_LocalInvocationID.x == 2)
+    {
+        for (i=0; i<dimensions.x; i++)
+        {
+            for (j=0; j<dimensions.y; j++)
+            {
+                bin = imageLoad(region, ivec2(i, j));
+                if(int(bin.b) == gl_LocalInvocationID.y)
+                {
+                    value += bin.a;
+                }
+            }
+        }
+    }
+
+    //imageStore(histogram, ivec2(gl_LocalInvocationID.xy), value); //correct
+    imageStore(histogram, ivec2(gl_LocalInvocationID.xy), vec4(1.0,1.0,1.0,1.0));//debug
+}
