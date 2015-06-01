@@ -69,6 +69,8 @@ public:
 
     virtual void setRegionDimensionsAndCenter (Eigen::Vector2i viewport, Eigen::Vector2f firstCorner, Eigen::Vector2f spread)
     {
+        std::cout<<"fC = "<<firstCorner[0]<<", "<<firstCorner[1]<<"; \n spread = "<<spread[0]<<" ,"<<spread[1]<<"; \n viewport = "<<viewport[0]<<", "<<viewport[1]<<";"<<std::endl;
+
         frameViewport = viewport;
 
         regionDimensions = Eigen::Vector2i(
@@ -98,8 +100,8 @@ public:
             widthIsMax = false;
         }
 
-        //lineFbo = new Tucano::Framebuffer(lineSize, 1, 1, GL_TEXTURE_2D, GL_RGBA32F, GL_RGBA, GL_FLOAT);
-        lineFbo = new Tucano::Framebuffer(3, NBINS, 1, GL_TEXTURE_2D, GL_R32F, GL_RED, GL_FLOAT);
+        lineFbo = new Tucano::Framebuffer(1, NBINS, 1, GL_TEXTURE_2D, GL_RGB32F, GL_RGB, GL_FLOAT);
+        //lineFbo = new Tucano::Framebuffer(3, NBINS, 1, GL_TEXTURE_2D, GL_R32F, GL_RED, GL_FLOAT);
 
         qHistogramTexture = new Tucano::Texture();
         qHistogramTexture->create(GL_TEXTURE_2D, GL_RGB32F, lineSize, 1, GL_RGB, GL_FLOAT, NULL);
@@ -143,6 +145,17 @@ public:
         frame->unbind();
         regionFbo->unbind();
 
+
+        Eigen::Vector4f preTemp;
+        for(int regX = 0; regX < regionDimensions[0]; regX++)
+        {
+            for(int regY = 0; regY < regionDimensions[1]; regY++)
+            {
+                preTemp = regionFbo->readPixel(0, Eigen::Vector2i(regX, regY));
+                std::cout<<"Region: pixel values"<<preTemp[0]<<" "<<preTemp[1]<<" "<<preTemp[2]<<" "<<preTemp[3]<<std::endl;
+            }
+        }
+
         //std::cout<<"histogram: Sum up histogram to one line"<<std::endl;
         //Sum up histogram to one line-------------------------------------------
         lineFbo->clearAttachments();
@@ -151,6 +164,7 @@ public:
         histogramshader.bind();
 
         histogramshader.setUniform("pvalues", (regionFbo->getTexture(0))->bind());
+        pshader.setUniform("dimensions", regionDimensions);
 
         //render
         quad.render();
@@ -177,8 +191,11 @@ public:
         int bin[3];
         
         std::cout<<"histogram: read first pixel."<<std::endl;
-        temp = lineFbo->readPixel(0, Eigen::Vector2i(0, 0));
-        std::cout<<"pixel values"<<temp[0]<<" "<<temp[1]<<" "<<temp[2]<<" "<<temp[3]<<std::endl;
+        for(int binIndex = 0; binIndex < NBINS; binIndex++)
+        {
+            temp = lineFbo->readPixel(0, Eigen::Vector2i(0, binIndex));
+            std::cout<<"pixel values"<<temp[0]<<" "<<temp[1]<<" "<<temp[2]<<" "<<temp[3]<<std::endl;
+        }
 
         std::cout<<"histogram: calculate the first histogram values"<<std::endl;
         //calculate the first histogram values
@@ -357,151 +374,149 @@ private:
 
 #endif
 
-/* deprecated function
+// deprecated function
 
-virtual void histogram (Tucano::Texture* frame, Tucano::Texture* hTex, float* divider)
-    {
-        //std::cout<<"histogram: Calculate pixel values"<<std::endl;
-        //Calculate pixel values-------------------------------------------------
+// virtual void histogram (Tucano::Texture* frame, Tucano::Texture* hTex, float* divider)
+//     {
+//         //std::cout<<"histogram: Calculate pixel values"<<std::endl;
+//         //Calculate pixel values-------------------------------------------------
 
-        //bind regionFbo
-        regionFbo->clearAttachments();
-        regionFbo->bindRenderBuffer(0);
+//         //bind regionFbo
+//         regionFbo->clearAttachments();
+//         regionFbo->bindRenderBuffer(0);
 
-        pshader.bind();
+//         pshader.bind();
 
-        pshader.setUniform("frameTexture", frame->bind());
-        pshader.setUniform("center", center);
-        pshader.setUniform("dimensions", regionDimensions);
+//         pshader.setUniform("frameTexture", frame->bind());
+//         pshader.setUniform("center", center);
+//         pshader.setUniform("dimensions", regionDimensions);
 
-        //render
-        quad.render();
+//         //render
+//         quad.render();
 
-        pshader.unbind();
+//         pshader.unbind();
 
-        frame->unbind();
-        regionFbo->unbind();
+//         frame->unbind();
+//         regionFbo->unbind();
 
-        //std::cout<<"histogram: Sum up histogram to one line"<<std::endl;
-        //Sum up histogram to one line-------------------------------------------
-        GLuint readUnit = (regionFbo->getTexture(0))->bind();
-        glBindImageTexture(readUnit, (regionFbo->getTexture(0))->texID(), 0, GL_FALSE, 0, GL_READ_WRITE,
-                       GL_R32F);
-        GLuint writeUnit = hTex->bind();
-        glBindImageTexture(writeUnit, hTex->texID(), 0, GL_FALSE, 0, GL_READ_WRITE,
-                       GL_RGBA32F);
+//         //std::cout<<"histogram: Sum up histogram to one line"<<std::endl;
+//         //Sum up histogram to one line-------------------------------------------
+//         GLuint readUnit = (regionFbo->getTexture(0))->bind();
+//         glBindImageTexture(readUnit, (regionFbo->getTexture(0))->texID(), 0, GL_FALSE, 0, GL_READ_WRITE,
+//                        GL_R32F);
+//         GLuint writeUnit = hTex->bind();
+//         glBindImageTexture(writeUnit, hTex->texID(), 0, GL_FALSE, 0, GL_READ_WRITE,
+//                        GL_RGBA32F);
 
-        histogramshader.bind();
+//         histogramshader.bind();
 
-        histogramshader.setUniform("region", (GLint)readUnit);
-        histogramshader.setUniform("histogram", (GLint)writeUnit);//if error, cast to GLint
-        pshader.setUniform("dimensions", regionDimensions);
+//         histogramshader.setUniform("region", (GLint)readUnit);
+//         histogramshader.setUniform("histogram", (GLint)writeUnit);//if error, cast to GLint
+//         pshader.setUniform("dimensions", regionDimensions);
 
-        //render
-        glDispatchCompute(1,1,1);
+//         //render
+//         glDispatchCompute(1,1,1);
 
-        glBindImageTexture(0, (regionFbo->getTexture(0))->texID(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-        glBindImageTexture(0, hTex->texID(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-        glBindImageTexture(0, 0, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+//         glBindImageTexture(0, (regionFbo->getTexture(0))->texID(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+//         glBindImageTexture(0, hTex->texID(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
+//         glBindImageTexture(0, 0, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 
-        (regionFbo->getTexture(0))->unbind();
-        hTex->unbind();
+//         (regionFbo->getTexture(0))->unbind();
+//         hTex->unbind();
 
-        histogramshader.unbind();
+//         histogramshader.unbind();
 
-        Tucano::Misc::errorCheckFunc(__FILE__, __LINE__);
+//         Tucano::Misc::errorCheckFunc(__FILE__, __LINE__);
 
-        //std::cout<<"histogram: CPU: sum up and build histogram to texture"<<std::endl;
-        //CPU: sum up and build histogram to texture-----------------------------
-        //Fetch histogram from GPU
-        /*
-        hTex->bind();
-
-        if (histogramRaw) delete histogramRaw;
-        histogramRaw = new float[3*NBINS*4];
-        std::cout<<"histogram: debug pre "<<histogramRaw[0]<<std::endl;
-        //std::cout<<"histogram: divider "<<hist[0]<<std::endl;
-        //for (int i = 0; i < 3*NBINS*4; ++i)
-        //{
-        //    hist[i] = 42;
-        //}
-
-        glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-
-        glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_FLOAT, histogramRaw);
-
-        Tucano::Misc::errorCheckFunc(__FILE__, __LINE__);
-
-        hTex->unbind();
-        *divider = 0;
-        //for (int i = 0; i < NBINS*3; ++i)
-        //{
-        //    *divider += histogramRaw[i];
-        //}
-        std::cout<<"histogram: debug pos "<<histogramRaw[0]<<std::endl;
-        */
-
-        /*
-        std::cout<<"histogram: clean histogramRaw array"<<std::endl;
-        //clean histogramRaw array
-        for (int i = 0; i < NBINS*3; ++i)
-        {
-            std::cout<<i<<std::endl;
-            histogramRaw[i] = 0.0;
-        }
-
-        //
-        Eigen::Vector4f temp;
-        float divider = 0.0;
-        int bin[3];
+//         //std::cout<<"histogram: CPU: sum up and build histogram to texture"<<std::endl;
+//         //CPU: sum up and build histogram to texture-----------------------------
+//         //Fetch histogram from GPU
         
-        std::cout<<"histogram: read first pixel."<<std::endl;
-        temp = lineFbo->readPixel(0, Eigen::Vector2i(0, 0));
-        std::cout<<"pixel values"<<temp[0]<<" "<<temp[1]<<" "<<temp[2]<<" "<<temp[3]<<std::endl;
+//         hTex->bind();
 
-        std::cout<<"histogram: calculate the first histogram values"<<std::endl;
-        //calculate the first histogram values
-        divider = temp[3];
-        bin[0] = (int) (3*floor(temp[0]));
-        histogramRaw[bin[0]] += temp[3];
-        bin[1] = (int) (3*floor(temp[1])+1);
-        histogramRaw[bin[1]] += temp[3];
-        bin[2] = (int) (3*floor(temp[2])+2);
-        histogramRaw[bin[2]] += temp[3];
+//         if (histogramRaw) delete histogramRaw;
+//         histogramRaw = new float[3*NBINS*4];
+//         std::cout<<"histogram: debug pre "<<histogramRaw[0]<<std::endl;
+//         //std::cout<<"histogram: divider "<<hist[0]<<std::endl;
+//         //for (int i = 0; i < 3*NBINS*4; ++i)
+//         //{
+//         //    hist[i] = 42;
+//         //}
 
-        std::cout<<"histogram: calculate the rest of the histogram values"<<std::endl;
-        std::cout<<"lineSize: "<<lineSize<<std::endl;
-        //calculate the rest of the histogram values
-        for (int j = 1; j < lineSize; ++j)
-        {
-            std::cout<<j<<std::endl;
+//         glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
-            temp = lineFbo->readPixel(0, Eigen::Vector2i(j, 0));
+//         glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_FLOAT, histogramRaw);
 
-            divider += temp[3];
-            bin[0] = (int) (3*floor(temp[0]));
-            bin[1] = (int) (3*floor(temp[1])+1);
-            bin[2] = (int) (3*floor(temp[2])+2);
+//         Tucano::Misc::errorCheckFunc(__FILE__, __LINE__);
+
+//         hTex->unbind();
+//         *divider = 0;
+//         //for (int i = 0; i < NBINS*3; ++i)
+//         //{
+//         //    *divider += histogramRaw[i];
+//         //}
+//         std::cout<<"histogram: debug pos "<<histogramRaw[0]<<std::endl;
+        
+
+//         /*
+//         std::cout<<"histogram: clean histogramRaw array"<<std::endl;
+//         //clean histogramRaw array
+//         for (int i = 0; i < NBINS*3; ++i)
+//         {
+//             std::cout<<i<<std::endl;
+//             histogramRaw[i] = 0.0;
+//         }
+
+//         //
+//         Eigen::Vector4f temp;
+//         float divider = 0.0;
+//         int bin[3];
+        
+//         std::cout<<"histogram: read first pixel."<<std::endl;
+//         temp = lineFbo->readPixel(0, Eigen::Vector2i(0, 0));
+//         std::cout<<"pixel values"<<temp[0]<<" "<<temp[1]<<" "<<temp[2]<<" "<<temp[3]<<std::endl;
+
+//         std::cout<<"histogram: calculate the first histogram values"<<std::endl;
+//         //calculate the first histogram values
+//         divider = temp[3];
+//         bin[0] = (int) (3*floor(temp[0]));
+//         histogramRaw[bin[0]] += temp[3];
+//         bin[1] = (int) (3*floor(temp[1])+1);
+//         histogramRaw[bin[1]] += temp[3];
+//         bin[2] = (int) (3*floor(temp[2])+2);
+//         histogramRaw[bin[2]] += temp[3];
+
+//         std::cout<<"histogram: calculate the rest of the histogram values"<<std::endl;
+//         std::cout<<"lineSize: "<<lineSize<<std::endl;
+//         //calculate the rest of the histogram values
+//         for (int j = 1; j < lineSize; ++j)
+//         {
+//             std::cout<<j<<std::endl;
+
+//             temp = lineFbo->readPixel(0, Eigen::Vector2i(j, 0));
+
+//             divider += temp[3];
+//             bin[0] = (int) (3*floor(temp[0]));
+//             bin[1] = (int) (3*floor(temp[1])+1);
+//             bin[2] = (int) (3*floor(temp[2])+2);
             
-            std::cout<<"pixel values"<<temp[0]<<" "<<temp[1]<<" "<<temp[2]<<" "<<temp[3]<<std::endl;
-            std::cout<<"bins"<<bin[0]<<" "<<bin[1]<<" "<<bin[2]<<std::endl;
+//             std::cout<<"pixel values"<<temp[0]<<" "<<temp[1]<<" "<<temp[2]<<" "<<temp[3]<<std::endl;
+//             std::cout<<"bins"<<bin[0]<<" "<<bin[1]<<" "<<bin[2]<<std::endl;
 
-            histogramRaw[bin[0]] += temp[3];
-            histogramRaw[bin[1]] += temp[3];
-            histogramRaw[bin[2]] += temp[3];
-        }
+//             histogramRaw[bin[0]] += temp[3];
+//             histogramRaw[bin[1]] += temp[3];
+//             histogramRaw[bin[2]] += temp[3];
+//         }
 
-        std::cout<<"histogram: divide all histogram values"<<std::endl;
-        //divide all histogram values
-        for (int k = 0; k < NBINS*3; ++k)
-        {
-            histogramRaw[k] /= divider;
-        }
+//         std::cout<<"histogram: divide all histogram values"<<std::endl;
+//         //divide all histogram values
+//         for (int k = 0; k < NBINS*3; ++k)
+//         {
+//             histogramRaw[k] /= divider;
+//         }
 
-        std::cout<<"histogram: CPU: sum up and build histogram to texture"<<std::endl;
-        //update hTex with histogramRaw
-        hTex->update(histogramRaw);
-        */
-    }
-
-*/
+//         std::cout<<"histogram: CPU: sum up and build histogram to texture"<<std::endl;
+//         //update hTex with histogramRaw
+//         hTex->update(histogramRaw);
+//         */
+//     }

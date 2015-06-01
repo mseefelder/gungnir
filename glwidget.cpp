@@ -138,8 +138,8 @@ void GLWidget::paintGL (void)
         }
         else
         {
-            meanShift.histogramP(frameTexture);
-            meanShift.meanshift(&ROIcorner, &ROIspread);
+            //meanShift.histogramP(frameTexture);
+            //meanShift.meanshift(&ROIcorner, &ROIspread);
         }
     }
 
