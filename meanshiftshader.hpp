@@ -27,6 +27,7 @@ public:
         regionFbo = NULL;
         meanShiftFbo = NULL;
         lineFbo = NULL;
+        sumFbo = NULL;
 
         histogramRaw = NULL;
 
@@ -61,6 +62,7 @@ public:
         regionFbo = NULL; //depends on region size //new Tucano::Framebuffer(1, NBINS, 1, GL_TEXTURE_2D, GL_RGB32F, GL_RGB, GL_FLOAT)
         lineFbo = NULL; //depends on region size
         meanShiftFbo = NULL;
+        sumFbo = NULL;
 
         lineSize = 0;
 
@@ -69,13 +71,12 @@ public:
 
     virtual void setRegionDimensionsAndCenter (Eigen::Vector2i viewport, Eigen::Vector2f firstCorner, Eigen::Vector2f spread)
     {
-        std::cout<<"fC = "<<firstCorner[0]<<", "<<firstCorner[1]<<"; \n spread = "<<spread[0]<<" ,"<<spread[1]<<"; \n viewport = "<<viewport[0]<<", "<<viewport[1]<<";"<<std::endl;
-
         frameViewport = viewport;
+        std::cout<<"fC = "<<firstCorner[0]*frameViewport[0]<<", "<<firstCorner[1]*frameViewport[1]<<"; \n spread = "<<spread[0]*frameViewport[0]<<" ,"<<spread[1]*frameViewport[1]<<"; \n viewport = "<<viewport[0]<<", "<<viewport[1]<<";"<<std::endl;
 
         regionDimensions = Eigen::Vector2i(
-            abs((spread[0]-firstCorner[0]))*frameViewport[0],
-            abs((spread[1]-firstCorner[1]))*frameViewport[1]
+            abs((spread[0]-firstCorner[0]))*frameViewport[0]/2.0,
+            abs((spread[1]-firstCorner[1]))*frameViewport[1]/2.0
         );
 
         center = Eigen::Vector2f(
@@ -101,7 +102,7 @@ public:
         }
 
         lineFbo = new Tucano::Framebuffer(1, NBINS, 1, GL_TEXTURE_2D, GL_RGB32F, GL_RGB, GL_FLOAT);
-        //lineFbo = new Tucano::Framebuffer(3, NBINS, 1, GL_TEXTURE_2D, GL_R32F, GL_RED, GL_FLOAT);
+        sumFbo = new Tucano::Framebuffer(1, lineSize, 1, GL_TEXTURE_2D, GL_RGB32F, GL_RGB, GL_FLOAT);
 
         qHistogramTexture = new Tucano::Texture();
         qHistogramTexture->create(GL_TEXTURE_2D, GL_RGB32F, lineSize, 1, GL_RGB, GL_FLOAT, NULL);
@@ -112,6 +113,7 @@ public:
         regionFbo->clearAttachments();
         lineFbo->clearAttachments();
         meanShiftFbo->clearAttachments();
+        sumFbo->clearAttachments();
 
         std::cout<<"Params: \n frameViewport: x="<<frameViewport[0]<<" y="<<frameViewport[1]<<"\n";
         std::cout<<"regionDimensions: x="<<regionDimensions[0]<<" y="<<regionDimensions[1]<<"\n";
@@ -121,7 +123,7 @@ public:
 
     }
 
-    virtual void histogram (Tucano::Texture* frame, Tucano::Texture* hTex)
+    virtual void histogram (Tucano::Texture* frame, Tucano::Texture* hTex, float* divider)
     {
         //std::cout<<"histogram: Calculate pixel values"<<std::endl;
         //Calculate pixel values-------------------------------------------------
@@ -145,7 +147,7 @@ public:
         frame->unbind();
         regionFbo->unbind();
 
-
+        /**/
         Eigen::Vector4f preTemp;
         for(int regX = 0; regX < regionDimensions[0]; regX++)
         {
@@ -155,7 +157,8 @@ public:
                 std::cout<<"Region: pixel values"<<preTemp[0]<<" "<<preTemp[1]<<" "<<preTemp[2]<<" "<<preTemp[3]<<std::endl;
             }
         }
-
+        /**/
+        
         //std::cout<<"histogram: Sum up histogram to one line"<<std::endl;
         //Sum up histogram to one line-------------------------------------------
         lineFbo->clearAttachments();
@@ -164,7 +167,7 @@ public:
         histogramshader.bind();
 
         histogramshader.setUniform("pvalues", (regionFbo->getTexture(0))->bind());
-        pshader.setUniform("dimensions", regionDimensions);
+        histogramshader.setUniform("dimensions", regionDimensions);
 
         //render
         quad.render();
@@ -174,29 +177,23 @@ public:
         (regionFbo->getTexture(0))->unbind();
         lineFbo->unbind();
 
-        std::cout<<"histogram: CPU: sum up and build histogram to texture"<<std::endl;
+        //std::cout<<"histogram: CPU: sum up and build histogram to texture"<<std::endl;
         //CPU: sum up and build histogram to texture-----------------------------
-        
-        std::cout<<"histogram: clean histogramRaw array"<<std::endl;
-        //clean histogramRaw array
-        for (int i = 0; i < NBINS*3; ++i)
-        {
-            std::cout<<i<<std::endl;
-            histogramRaw[i] = 0.0;
-        }
 
         //
         Eigen::Vector4f temp;
-        float divider = 0.0;
+        *divider = 0.0;
         int bin[3];
         
+        /**/
         std::cout<<"histogram: read first pixel."<<std::endl;
-        for(int binIndex = 0; binIndex < NBINS; binIndex++)
+        for(int dbinIndex = 0; dbinIndex < NBINS; dbinIndex++)
         {
-            temp = lineFbo->readPixel(0, Eigen::Vector2i(0, binIndex));
+            temp = lineFbo->readPixel(0, Eigen::Vector2i(0, dbinIndex));
             std::cout<<"pixel values"<<temp[0]<<" "<<temp[1]<<" "<<temp[2]<<" "<<temp[3]<<std::endl;
         }
-
+        /**/
+        /*
         std::cout<<"histogram: calculate the first histogram values"<<std::endl;
         //calculate the first histogram values
         divider = temp[3];
@@ -206,55 +203,51 @@ public:
         histogramRaw[bin[1]] += temp[3];
         bin[2] = (int) (3*floor(temp[2])+2);
         histogramRaw[bin[2]] += temp[3];
-
-        std::cout<<"histogram: calculate the rest of the histogram values"<<std::endl;
-        std::cout<<"lineSize: "<<lineSize<<std::endl;
+        */
+        //std::cout<<"histogram: calculate the rest of the histogram values"<<std::endl;
+        //std::cout<<"lineSize: "<<lineSize<<std::endl;
         //calculate the rest of the histogram values
         //for (int j = 1; j < lineSize; ++j)
-        for (int column = 1; column < 3; ++column)
+
+        //std::cout<<"histogram: clean histogramRaw array"<<std::endl;
+        //clean histogramRaw array
+        for (int i = 0; i < NBINS*3; ++i)
         {
-            for (int row = 0; row < NBINS; ++row)
-            {
-                /* Re-make code
-                std::cout<<column<<" "<<row<<std::endl;
-
-                temp = lineFbo->readPixel(0, Eigen::Vector2i(column, row));
-
-                divider += temp[3];
-                bin[0] = (int) (3*floor(temp[0]));
-                bin[1] = (int) (3*floor(temp[1])+1);
-                bin[2] = (int) (3*floor(temp[2])+2);
-                
-                std::cout<<"pixel values"<<temp[0]<<" "<<temp[1]<<" "<<temp[2]<<" "<<temp[3]<<std::endl;
-                std::cout<<"bins"<<bin[0]<<" "<<bin[1]<<" "<<bin[2]<<std::endl;
-
-                histogramRaw[bin[0]] += temp[3];
-                histogramRaw[bin[1]] += temp[3];
-                histogramRaw[bin[2]] += temp[3];
-                */
-            }
+            histogramRaw[i] = 0.0;
         }
 
+        for (int binIndex = 0; binIndex < NBINS; ++binIndex)
+        {
+            temp = lineFbo->readPixel(0, Eigen::Vector2i(0, binIndex));
+            *divider += temp[0]+temp[1]+temp[2];
+            histogramRaw[3*binIndex] = temp[0];
+            histogramRaw[(3*binIndex)+1] = temp[1];
+            histogramRaw[(3*binIndex)+2] = temp[2];
+        }
+        //std::cout<<"divider: "<<divider<<std::endl;
+
+        /*
         std::cout<<"histogram: divide all histogram values"<<std::endl;
         //divide all histogram values
-        for (int k = 0; k < NBINS*3; ++k)
+        for (binIndex = 0; binIndex < NBINS; ++binIndex)
         {
-            histogramRaw[k] /= divider;
+            histogramRaw[binIndex] /= divider;
         }
+        */
 
-        std::cout<<"histogram: CPU: sum up and build histogram to texture"<<std::endl;
+        //std::cout<<"histogram: CPU: sum up and build histogram to texture"<<std::endl;
         //update hTex with histogramRaw
         hTex->update(histogramRaw);
     }
 
     virtual void histogramQ (Tucano::Texture* frame)
     {
-        histogram(frame, qHistogramTexture);
+        histogram(frame, qHistogramTexture, &dividerQ);
     }
 
     virtual void histogramP (Tucano::Texture* frame)
     {
-        histogram(frame, pHistogramTexture);
+        histogram(frame, pHistogramTexture, &dividerP);
     }
 
     /**
@@ -265,6 +258,7 @@ public:
         //Calculate pixel values-------------------------------------------------
 
         //bind regionFbo
+        meanShiftFbo->clearAttachments();
         meanShiftFbo->bindRenderBuffer(0);
 
         meanshiftshader.bind();
@@ -275,6 +269,8 @@ public:
         meanshiftshader.setUniform("qHistogram", qHistogramTexture->bind());
         meanshiftshader.setUniform("pHistogram", pHistogramTexture->bind());
         meanshiftshader.setUniform("viewport", frameViewport);
+        meanshiftshader.setUniform("dividerP", dividerP);
+        meanshiftshader.setUniform("dividerQ", dividerQ);
 
 
         //render
@@ -287,24 +283,62 @@ public:
         pHistogramTexture->unbind();
         meanShiftFbo->unbind();
 
+        //debug
+        /**/
+        Eigen::Vector4f preTemp;
+        for(int regX = 0; regX < regionDimensions[0]; regX++)
+        {
+            for(int regY = 0; regY < regionDimensions[1]; regY++)
+            {
+                preTemp = meanShiftFbo->readPixel(0, Eigen::Vector2i(regX, regY));
+                std::cout<<"Meanshift: pixel values"<<preTemp[0]<<" "<<preTemp[1]<<" "<<preTemp[2]<<" "<<preTemp[3]<<std::endl;
+            }
+        }
+        /**/
+
         //Sum up histogram to one line-------------------------------------------
-        lineFbo->clearAttachments();
-        lineFbo->bindRenderBuffer(0);
+        sumFbo->clearAttachments();
+        sumFbo->bindRenderBuffer(0);
 
         sumshader.bind();
 
-        sumshader.setUniform("pvalues", (regionFbo->getTexture(0))->bind());
+        sumshader.setUniform("pvalues", (meanShiftFbo->getTexture(0))->bind());
+        sumshader.setUniform("dimensions", regionDimensions);
+        sumshader.setUniform("widthIsMax", widthIsMax);
 
         //render
         quad.render();
 
         sumshader.unbind();
         
-        (regionFbo->getTexture(0))->unbind();
-        lineFbo->unbind();
-
+        (meanShiftFbo->getTexture(0))->unbind();
+        sumFbo->unbind();
         //CPU: sum up and build histogram to texture-----------------------------
 
+        Eigen::Vector4f temp;
+        float xComponent = 0.0;
+        float yComponent = 0.0;
+        float divider = 0.0;
+
+        for (int i = 0; i < lineSize; ++i)
+        {
+            temp = sumFbo->readPixel(0, Eigen::Vector2i(0, i));
+            std::cout<<"Pixel on sum: summed values"<<temp[0]<<" "<<temp[1]<<" "<<temp[2]<<" "<<temp[3]<<std::endl;
+            xComponent += temp[0];
+            yComponent += temp[1];
+            divider += temp[2];
+        }
+
+        xComponent /= divider;
+        yComponent /= divider;
+
+        Eigen::Vector2f meanShiftVector(xComponent, yComponent);
+        std::cout<<meanShiftVector<<std::endl;
+
+        *corner += meanShiftVector;
+        *spread += meanShiftVector;
+        center += meanShiftVector;
+        /*
         //
         Eigen::Vector4f temp;
         float xComponent = 0.0;
@@ -336,8 +370,23 @@ public:
         *corner += meanShiftVector;
         *spread += meanShiftVector;
         center += meanShiftVector;
+        */
+
+        Tucano::Texture* swap =  qHistogramTexture;
+        qHistogramTexture = pHistogramTexture;
+        pHistogramTexture = swap;
 
         return meanShiftVector;
+    }
+
+    Tucano::Texture* roiPointer ()
+    {
+        return (regionFbo->getTexture(0));
+    }
+
+    Eigen::Vector2i viewport()
+    {
+        return regionDimensions;
     }
 
 private:
@@ -353,6 +402,7 @@ private:
     Tucano::Framebuffer* regionFbo;
     Tucano::Framebuffer* meanShiftFbo;
     Tucano::Framebuffer* lineFbo;
+    Tucano::Framebuffer* sumFbo;
 
     float* histogramRaw;
 
@@ -364,6 +414,8 @@ private:
     Eigen::Vector2i frameViewport;
 
     int lineSize;
+    float dividerP;
+    float dividerQ;
 
     Tucano::Mesh quad;
 };

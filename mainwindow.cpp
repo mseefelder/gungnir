@@ -24,6 +24,7 @@ void MainWindow::initialize( void )
     try
     {
     	ui->glwidget->initialize();
+        this->adjustSize();
     }
     catch (exception& e)
     {

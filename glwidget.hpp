@@ -59,6 +59,7 @@ public:
 
     void resizeGL(int w, int h)
     {
+        resize(w, h);
         glViewport(0, 0, this->width(), this->height());
         viewport = Eigen::Vector2i(this->width(), this->height());
 

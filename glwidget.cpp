@@ -88,7 +88,8 @@ int GLWidget::findWorkingCam (cv::VideoCapture** targetCamera, int starter)
 		cv::Mat scratch; 
 		if ((*targetCamera)->read(scratch) != false)
 		{
-			std::cout<<"Found camera!"<<std::endl;
+			std::cout<<"Found camera! \n w: "<<scratch.cols<<"; h: "<<scratch.rows<<std::endl;
+            this->resizeGL(scratch.cols, scratch.rows);
 			break;
 		}
 
@@ -127,7 +128,7 @@ void GLWidget::paintGL (void)
 	// renders the given image, not that we are setting a fixed viewport that follows the widgets size
     // so it may not be scaled correctly with the image's size (just to keep the example simple)
     Eigen::Vector2i viewport (this->width(), this->height());
-    rendertexture.renderTexture(*frameTexture, viewport);
+    rendertexture.renderTexture(*frameTexture, viewport);//debug commented
 
     if(regionDefined){
         if(!qValueReady)
@@ -138,14 +139,20 @@ void GLWidget::paintGL (void)
         }
         else
         {
-            //meanShift.histogramP(frameTexture);
-            //meanShift.meanshift(&ROIcorner, &ROIspread);
+            //rendertexture.renderTexture(*(meanShift.roiPointer()), meanShift.viewport());//debug
+            meanShift.histogramP(frameTexture);
+            //std::cout<<"corner & spread: before: \nc:"<<ROIcorner<<"\n & \ns:"<<ROIspread<<std::endl;
+            meanShift.meanshift(&ROIcorner, &ROIspread);
+            //std::cout<<"corner & spread: after: \nc:"<<ROIcorner<<"\n & \ns:"<<ROIspread<<std::endl;
+            regionDefined = false;
         }
     }
 
     //Eigen::Vector2f firstCorner (0.3,0.3);
     //Eigen::Vector2f spread (0.2,0.2);
+    //rendertexture.renderTexture(*frameTexture, viewport);//debug
     rect.renderTexture(viewport, ROIcorner, ROIspread);
+    
 
     update();
 }
