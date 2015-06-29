@@ -4,16 +4,9 @@
 GLWidget::GLWidget(QWidget *parent) : Tucano::QtPlainWidget(parent)
 {
 	initd = false;
-	markROI = true;
-    regionDefined = false;
-    qValueReady = false;
-	camera = NULL;
-    //frame = NULL;
-    nextCameraIndex = 0;
-    maxCamIndex = 10;
 
-    ROIcorner = Eigen::Vector2f(0.0,0.0);
-    ROIspread = Eigen::Vector2f(0.0,0.0);
+    ROIcorner = Eigen::Vector2i(0,0);
+    ROIspread = Eigen::Vector2i(10,10);
 }
 
 GLWidget::~GLWidget()
@@ -25,16 +18,6 @@ void GLWidget::initialize (void)
 {
 	/// resize OpenGL viewport to current size
     glViewport(0, 0, this->width(), this->height());
-
-    ///find and set camera to read from the first working webcam
-    try
-    {
-    	nextCameraIndex = findWorkingCam(&camera, nextCameraIndex);
-    }
-    catch (exception& e)
-    {
-    	throw;
-    }
 
     ///initialize frame container
     //frame = new cv::Mat;
@@ -49,62 +32,15 @@ void GLWidget::initialize (void)
     meanShift.setShadersDir(shaders_dir);
     meanShift.initialize();
 
-    //temporary
-    std::cout<<"Reading frame..."<<std::endl;
-    //*camera >> frame;
-    camera->read(frame);
-    std::cout<<"Frame has been read! Flipping..."<<std::endl;
-	cv::flip(frame, frame, 0);
-	std::cout<<"Frame has been flipped! Converting to texture..."<<std::endl;
+    this->resizeGL(10, 10);
 
 	//frameTextureID = frameTexture.create(GL_TEXTURE_2D, GL_RGB, frame.cols, frame.rows, GL_BGR, GL_UNSIGNED_BYTE, frame.ptr());
     frameTexture = new Tucano::Texture();
-	frameTexture->create(GL_TEXTURE_2D, GL_RGB, frame.cols, frame.rows, GL_BGR, GL_UNSIGNED_BYTE, frame.ptr());
-	std::cout<<"Frame is now on the GPU!"<<std::endl;
     //temporary
 
 
     /// set this widget as initialized
     initd = true;
-}
-
-int GLWidget::findWorkingCam (cv::VideoCapture** targetCamera, int starter)
-{
-	//start searching for camera at given index
-	int targetCameraIndex = starter;
-
-	while(targetCameraIndex < maxCamIndex)
-	{
-		//reset camera with new index
-		if(*targetCamera)
-		{
-			(*targetCamera)->release();
-			delete camera;	
-		}
-		(*targetCamera) = new cv::VideoCapture(targetCameraIndex);
-
-		//try to read a frame. If ->read() succeeds, it returns true and
-		//the while loop is broken. If not, false is returned, continuing the loop
-		cv::Mat scratch; 
-		if ((*targetCamera)->read(scratch) != false)
-		{
-			std::cout<<"Found camera! \n w: "<<scratch.cols<<"; h: "<<scratch.rows<<std::endl;
-            this->resizeGL(scratch.cols, scratch.rows);
-			break;
-		}
-
-		//Increase camera index to continue search
-		targetCameraIndex++;
-	}
-	//throw error if no camera is found
-	if (targetCameraIndex == maxCamIndex)
-	{
-		cameraException camex;
-		throw camex;
-	}
-
-	//returns the next index
-	return targetCameraIndex++;
 }
 
 void GLWidget::paintGL (void)
@@ -114,136 +50,105 @@ void GLWidget::paintGL (void)
 
 	makeCurrent();
 
-	glClearColor(1.0, 1.0, 1.0, 0.0);
-    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+    static const struct {
+      unsigned int   width;
+      unsigned int   height;
+      unsigned int   bytes_per_pixel; /* 2:RGB16, 3:RGB, 4:RGBA */ 
+      unsigned char  pixel_data[10 * 10 * 4 + 1];
+    } frame_one = {
+      10, 10, 4,
+      "\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0"
+      "\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\377\0\377\0\0\0\377\0\0\0\377\0"
+      "\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\377\0\377\0\0\0\377\0\0\0\377\0"
+      "\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0"
+      "\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\377\0\0\377\0\0\0\377\0\0"
+      "\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0"
+      "\377\0\0\377\377\377\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0"
+      "\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\377\377\0\0\377\377\377\0\0\377"
+      "\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\377"
+      "\0\0\377\0\0\377\377\0\0\377\377\377\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377"
+      "\0\0\0\377\0\0\0\377\0\377\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377"
+      "\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\377\0\377\0\0\0\377\0\0\0\377"
+      "\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\377\0\377\0\0\0\377\0\0\0\377"
+      "\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0"
+      "\0\0\377\0\0\0\377",
+    };
 
+    static const struct {
+      unsigned int   width;
+      unsigned int   height;
+      unsigned int   bytes_per_pixel; /* 2:RGB16, 3:RGB, 4:RGBA */ 
+      unsigned char  pixel_data[10 * 10 * 4 + 1];
+    } frame_two = {
+      10, 10, 4,
+      "\0\0\0\377\0\0\0\377\0\377\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377"
+      "\0\0\0\377\0\0\0\377\0\377\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377"
+      "\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0"
+      "\0\0\377\0\0\0\377\0\0\0\377\377\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0"
+      "\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\377\377\377"
+      "\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0"
+      "\0\377\0\0\0\377\0\0\377\377\0\0\377\377\377\0\0\377\0\0\0\377\0\0\0\377"
+      "\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\377\0\0\377\0\0\377\377"
+      "\0\0\377\377\377\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377"
+      "\0\377\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377"
+      "\0\0\0\377\0\0\0\377\0\377\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377"
+      "\0\0\0\377\0\0\0\377\0\377\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377"
+      "\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0"
+      "\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0\0\377\0\0"
+      "\0\377\0\0\0\377",
+    };
 
-    
-    //*camera >> frame;
-    camera->read(frame);
-	cv::flip(frame, frame, 0);
-	frameTexture->create(GL_TEXTURE_2D, GL_RGB, frame.cols, frame.rows, GL_BGR, GL_UNSIGNED_BYTE, frame.ptr());
+    static const struct {
+  unsigned int   width;
+  unsigned int   height;
+  unsigned int   bytes_per_pixel; /* 2:RGB16, 3:RGB, 4:RGBA */ 
+  unsigned char  pixel_data[4 * 4 * 4 + 1];
+} frame3 = {
+  4, 4, 4,
+  "\20\20\20\377\40\40\40\377000\377@@@\377\220\220\220\377ppp\377```\377PP"
+  "P\377\240\240\240\377\260\260\260\377\300\300\300\377\320\320\320\377\0\0"
+  "\0\377\377\377\377\377\360\360\360\377\340\340\340\377",
+};
+
+    /*
+    for(int i = 0; i<100; i++){
+      std::cout<<" ("<<(int)frame_one.pixel_data[4*i]
+        <<", "<<(int)frame_one.pixel_data[(4*i)+1]
+        <<", "<<(int)frame_one.pixel_data[(4*i)+2]
+        <<", "<<(int)frame_one.pixel_data[(4*i)+3]<<") ,";
+    }
+    std::cout<<"\n";
+    for(int i = 0; i<100; i++){
+      std::cout<<" ("<<(int)frame_two.pixel_data[4*i]
+        <<", "<<(int)frame_two.pixel_data[(4*i)+1]
+        <<", "<<(int)frame_two.pixel_data[(4*i)+2]
+        <<", "<<(int)frame_two.pixel_data[(4*i)+3]<<") ,";
+    }
+    std::cout<<std::endl;
+    */
+	
+  glClearColor(1.0, 1.0, 1.0, 0.0);
+  glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
+	frameTexture->create(GL_TEXTURE_2D, GL_RGBA8, frame_one.width, frame_one.height, GL_RGBA, GL_UNSIGNED_BYTE, frame_one.pixel_data);
 	
 
 	// renders the given image, not that we are setting a fixed viewport that follows the widgets size
     // so it may not be scaled correctly with the image's size (just to keep the example simple)
-    Eigen::Vector2i viewport (this->width(), this->height());
+    Eigen::Vector2i viewport (10,10);//(this->width(), this->height());
     rendertexture.renderTexture(*frameTexture, viewport);//debug commented
+        
+    meanShift.setRegionDimensionsAndCenter(viewport, ROIcorner, ROIspread);
+    meanShift.histogramQ(frameTexture);
+    
+    frameTexture->create(GL_TEXTURE_2D, GL_RGBA8, frame_two.width, frame_two.height, GL_RGBA, GL_UNSIGNED_BYTE, frame_two.pixel_data);
+    
+    meanShift.histogramP(frameTexture);
+    meanShift.meanshift(&ROIcorner, &ROIspread);
 
-    if(regionDefined){
-        if(!qValueReady)
-        {
-            meanShift.setRegionDimensionsAndCenter(viewport, ROIcorner, ROIspread);
-            meanShift.histogramQ(frameTexture);
-            qValueReady = true;
-        }
-        else
-        {
-            //rendertexture.renderTexture(*(meanShift.roiPointer()), meanShift.viewport());//debug
-            meanShift.histogramP(frameTexture);
-            //std::cout<<"corner & spread: before: \nc:"<<ROIcorner<<"\n & \ns:"<<ROIspread<<std::endl;
-            meanShift.meanshift(&ROIcorner, &ROIspread);
-            //std::cout<<"corner & spread: after: \nc:"<<ROIcorner<<"\n & \ns:"<<ROIspread<<std::endl;
-            regionDefined = false;
-        }
-    }
-
-    //Eigen::Vector2f firstCorner (0.3,0.3);
-    //Eigen::Vector2f spread (0.2,0.2);
-    //rendertexture.renderTexture(*frameTexture, viewport);//debug
     rect.renderTexture(viewport, ROIcorner, ROIspread);
     
+    initd = false;
 
     update();
 }
-
-/**
-* @brief Callback for mouse press event.
-*
-* The mouse press starts a rotation or a translation if Shift is pressed.
-* @param event The mouse event that triggered the callback.
-*/
-void GLWidget::mousePressEvent (QMouseEvent * event)
-{
-    setFocus ();
-    Eigen::Vector2f screen_pos (
-        ((2*((float)event->x()/this->width()))-1.0)
-        , 
-        ((-2*((float)event->y()/this->height()))+1.0)
-        );
-
-    if (event->modifiers() & Qt::ShiftModifier){}
-    else
-    {
-        if (event->button() == Qt::LeftButton)
-        {
-            if(markROI) ROIcorner = screen_pos;
-        }
-        if (event->button() == Qt::RightButton)
-        {
-
-        }
-    }
-    //std::cout<<ROIcorner[0]<<","<<ROIcorner[1]<<" & "<<ROIspread[0]<<","<<ROIspread[1]<<std::endl;
-}
-
-/**
- * @brief Callback for mouse move event.
- *
- * If rotating or translating, this method updates the trackball position.
- * @param event The mouse event that triggered the callback.
- */
-void GLWidget::mouseMoveEvent (QMouseEvent * event)
-{
-    Eigen::Vector2f screen_pos (
-        ((2*((float)event->x()/this->width()))-1.0)
-        , 
-        ((-2*((float)event->y()/this->height()))+1.0)
-        );
-
-    if (event->modifiers() & Qt::ShiftModifier && event->buttons() & Qt::LeftButton){}
-    else
-    {
-        if (event->buttons() & Qt::LeftButton)
-        {
-            if(markROI) ROIspread = screen_pos;
-        }
-        if (event->buttons() & Qt::RightButton)
-        {
-        }
-    }
-}
-
-/**
- * @brief Callback for mouse release event.
- *
- * Stops rotation or translation.
- * @param event The mouse event that triggered the callback.
- */
-void GLWidget::mouseReleaseEvent (QMouseEvent * event)
-{
-    Eigen::Vector2f screen_pos (
-        ((2*((float)event->x()/this->width()))-1.0)
-        , 
-        ((-2*((float)event->y()/this->height()))+1.0)
-        );
-
-    if (event->button() == Qt::LeftButton)
-    {
-        if(markROI) 
-        {
-            ROIspread = screen_pos;
-            regionDefined = true;
-            qValueReady = false;
-            markROI = false;
-        }
-    }
-    if (event->button() == Qt::RightButton)
-    {
-        
-    }
-}
-
-/*
-http://www.stat.wisc.edu/~mchung/teaching/MIA/reading/diffusion.gaussian.kernel.pdf.pdf
-*/

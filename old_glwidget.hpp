@@ -21,18 +21,27 @@ protected:
     /// Is initialized
     bool initd;
 
+    /// Is on RoI setting mode
+    bool markROI;
+
+    bool regionDefined;
+
+    bool qValueReady;
+
     // Rendering quad
     Tucano::Mesh *quad;
 
     /// Path where shaders are stored
     string shaders_dir;
 
+    ///Max camera search index
+    int maxCamIndex;
+
     /// FUNCTIONS
 
 public:
 
     /// VARIABLES
-    
 
     /// FUNCTIONS
     explicit GLWidget(QWidget *parent);
@@ -63,6 +72,15 @@ public slots:
 
 private:
     //VARIABLES
+    
+    ///camera in use
+    cv::VideoCapture* camera;
+    
+    ///frame where we read the camera frames to
+    cv::Mat frame;
+    
+    ///if we want to get another camera, call findWorkingCam starting from here
+    int nextCameraIndex;
 
     /// Render image effect (simply renders a texture)
     Effects::RenderTexture rendertexture;
@@ -85,7 +103,30 @@ private:
 
 protected:
 
-    //events go in here
+    //events go in here 
+    /**
+     * @brief Callback for mouse press event.
+     *
+     * The mouse press starts a rotation or a translation if Shift is pressed.
+     * @param event The mouse event that triggered the callback.
+     */
+    void mousePressEvent (QMouseEvent * event);
+
+    /**
+     * @brief Callback for mouse move event.
+     *
+     * If rotating or translating, this method updates the trackball position.
+     * @param event The mouse event that triggered the callback.
+     */
+    void mouseMoveEvent (QMouseEvent * event);
+
+    /**
+     * @brief Callback for mouse release event.
+     *
+     * Stops rotation or translation.
+     * @param event The mouse event that triggered the callback.
+     */
+    void mouseReleaseEvent (QMouseEvent * event);
 
 };
 
