@@ -29,11 +29,11 @@ void main()
 	vec4 pvalue = texelFetch(pvalues, iposition, 0);//texture(pvalues, normPosition);
 
 	float weight = 0.0;
-	weight += sqrt((texelFetch(pHistogram, ivec2(0, int(pvalue.r)), 0).r/dividerP)/(texelFetch(qHistogram, ivec2(0, int(pvalue.r)), 0).r/dividerQ));
-	weight += sqrt((texelFetch(pHistogram, ivec2(0, int(pvalue.g)), 0).g/dividerP)/(texelFetch(qHistogram, ivec2(0, int(pvalue.g)), 0).g/dividerQ));
-	weight += sqrt((texelFetch(pHistogram, ivec2(0, int(pvalue.b)), 0).b/dividerP)/(texelFetch(qHistogram, ivec2(0, int(pvalue.b)), 0).b/dividerQ));
+	weight += sqrt((texelFetch(qHistogram, ivec2(0, int(pvalue.r)), 0).r/dividerQ)/(texelFetch(pHistogram, ivec2(0, int(pvalue.r)), 0).r/dividerP));
+	weight += sqrt((texelFetch(qHistogram, ivec2(0, int(pvalue.g)), 0).g/dividerQ)/(texelFetch(pHistogram, ivec2(0, int(pvalue.g)), 0).g/dividerP));
+	weight += sqrt((texelFetch(qHistogram, ivec2(0, int(pvalue.b)), 0).b/dividerQ)/(texelFetch(pHistogram, ivec2(0, int(pvalue.b)), 0).b/dividerP));
 
-	float normalizer = weight*exp( -0.5*(dist2(vec2(center), vec2(iposition))/(float(dimensions.x)*float(dimensions.x)/16.0)) );//exp( -0.5*(dist2(vec2(center), position)/(float(dimensions.x)*float(dimensions.x)/16.0)) );
+	float normalizer = weight*exp( -0.5* (dist2(vec2(center), vec2(iposition))) / ( (float(dimensions.x)*float(dimensions.x)) /16.0) );
 	float xComp = iposition.x*normalizer;
 	float yComp = iposition.y*normalizer;
 
@@ -41,25 +41,3 @@ void main()
   	//out_Color = vec4(iposition, normalizer, weight);
   	//out_Color = texelFetch(pHistogram, ivec2(0, 0), 0);//vec4(weight);
 }
-
-// void main()
-// {texelFetch(pHistogram, ivec2(0, 0), 0)
-// 	//Pixel position on region of interest, mapped to whole frame:
-// 	vec2 position = vec2(0.0);
-// 	position.x = (gl_FragCoord.x + ((center.x+1.0)/2.0) * viewport.x - dimensions.x/2.0)/(viewport.x*1.0);
-// 	position.y = (gl_FragCoord.y + ((center.y+1.0)/2.0) *viewport.y - dimensions.y/2.0)/(viewport.y*1.0);
-
-// 	vec4 pvalue = texture(pvalues, vec2(gl_FragCoord.xy), 0);
-
-// 	float weight = 0.0;
-// 	weight += sqrt((texelFetch(pHistogram, ivec2(1, int(pvalue.r)), 0).a/dividerP)/(texelFetch(qHistogram, ivec2(1, int(pvalue.r)), 0).a/dividerQ));
-// 	weight += sqrt((texelFetch(pHistogram, ivec2(1, int(pvalue.g)), 0).a/dividerP)/(texelFetch(qHistogram, ivec2(1, int(pvalue.g)), 0).a/dividerQ));
-// 	weight += sqrt((texelFetch(pHistogram, ivec2(1, int(pvalue.b)), 0).a/dividerP)/(texelFetch(qHistogram, ivec2(1, int(pvalue.b)), 0).a/dividerQ));
-
-// 	float normalizer = weight*exp(-0.5*dist2(center, position)/(dimensions.x*dimensions.x/16.0));
-// 	float xComp = position.x*normalizer;
-// 	float yComp = position.y*normalizer;
-
-//   	out_Color = vec4(xComp, yComp, normalizer, 1.0);
-//   	//out_Color = vec4(weight);
-// }
