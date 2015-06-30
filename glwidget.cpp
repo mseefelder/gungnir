@@ -153,7 +153,7 @@ void GLWidget::paintGL (void)
             // //std::cout<<"corner & spread: before: \nc:"<<ROIcorner<<"\n & \ns:"<<ROIspread<<std::endl;
             meanShift.meanshift(&ROIcorner, &ROIspread);
             // //std::cout<<"corner & spread: after: \nc:"<<ROIcorner<<"\n & \ns:"<<ROIspread<<std::endl;
-            regionDefined = false;
+            //regionDefined = false;
         }
     }
 

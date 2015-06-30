@@ -159,7 +159,7 @@ public:
         frame->unbind();
         regionFbo->unbind();
 
-        /**/
+        /**
         Eigen::Vector4f preTemp;
         for(int regX = 0; regX < regionDimensions[0]; regX++)
         {
@@ -199,14 +199,18 @@ public:
         int bin[3];
         
         
-        std::cout<<"histogram: lineFbo contents"<<std::endl;
+        //std::cout<<"histogram: lineFbo contents"<<std::endl;
+        //THE DIVIDER TERM GETS CANCELLED OUT IN THE WEIGHT CALCULATION ------------------- IMPORTANT
+
         for(int dbinIndex = 0; dbinIndex < NBINS; dbinIndex++)
         {
             temp = lineFbo->readPixel(0, Eigen::Vector2i(0, dbinIndex));
             *divider += temp[0]+temp[1]+temp[2];
-            /**/std::cout<<" H Bin "<<dbinIndex<<": R:"<<temp[0]<<" G:"<<temp[1]<<" B:"<<temp[2]<<" "<<temp[3]<<std::endl;/**/
+            /**std::cout<<" H Bin "<<dbinIndex<<": R:"<<temp[0]<<" G:"<<temp[1]<<" B:"<<temp[2]<<" "<<temp[3]<<std::endl;/**/
         }
         
+        //------------------------------------------------------------- ------------------- IMPORTANT
+
         /*
         std::cout<<"histogram: calculate the first histogram values"<<std::endl;
         //calculate the first histogram values
@@ -301,7 +305,7 @@ public:
         meanShiftFbo->unbind();
 
         //debug
-        /**/
+        /**
         Eigen::Vector4f preTemp;
         for(int regX = 0; regX < regionDimensions[0]; regX++)
         {
@@ -341,7 +345,7 @@ public:
         for (int i = 0; i < lineSize; ++i)
         {
             temp = sumFbo->readPixel(0, Eigen::Vector2i(0, i));
-            std::cout<<"Pixel on sum: summed values"<<temp[0]<<" "<<temp[1]<<" "<<temp[2]<<" "<<temp[3]<<std::endl;
+            //std::cout<<"Pixel on sum: summed values"<<temp[0]<<" "<<temp[1]<<" "<<temp[2]<<" "<<temp[3]<<std::endl;
             xComponent += temp[0];
             yComponent += temp[1];
             divider += temp[2];
@@ -349,14 +353,14 @@ public:
 
         xComponent /= divider;
         yComponent /= divider;
-        std::cout<<"Lower corner: "<<lowerCorner<<std::endl;
-        std::cout<<"Float result: "<<xComponent<<", "<<yComponent<<std::endl;
+        //std::cout<<"Lower corner: "<<lowerCorner<<std::endl;
+        //std::cout<<"Float result: "<<xComponent<<", "<<yComponent<<std::endl;
         int intX = (int)round(xComponent);
         int intY = (int)round(yComponent);
 
         Eigen::Vector2i newCenter(intX, intY);
         Eigen::Vector2i meanShiftVector = newCenter-center;
-        std::cout<<"New center: "<<newCenter<<"\n meanshift vector: "<<meanShiftVector<<std::endl;
+        //std::cout<<"New center: "<<newCenter<<"\n meanshift vector: "<<meanShiftVector<<std::endl;
 
         *corner += meanShiftVector;
         *spread += meanShiftVector;
