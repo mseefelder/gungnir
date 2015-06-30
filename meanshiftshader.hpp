@@ -287,7 +287,7 @@ public:
         meanshiftshader.setUniform("viewport", frameViewport);
         meanshiftshader.setUniform("dividerP", dividerP);
         meanshiftshader.setUniform("dividerQ", dividerQ);
-        pshader.setUniform("lowerCorner", lowerCorner);
+        meanshiftshader.setUniform("lowerCorner", lowerCorner);
 
 
         //render
@@ -349,6 +349,8 @@ public:
 
         xComponent /= divider;
         yComponent /= divider;
+        std::cout<<"Lower corner: "<<lowerCorner<<std::endl;
+        std::cout<<"Float result: "<<xComponent<<", "<<yComponent<<std::endl;
         int intX = (int)round(xComponent);
         int intY = (int)round(yComponent);
 

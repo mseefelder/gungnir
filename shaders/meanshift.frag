@@ -26,7 +26,7 @@ void main()
 
 	//Pixel values:
 	//vec4 proof = 
-	vec4 pvalue = texelFetch(pvalues, iposition, 0);//texture(pvalues, normPosition);
+	vec4 pvalue = texelFetch(pvalues, ivec2(gl_FragCoord.xy), 0);//texture(pvalues, normPosition);
 
 	float weight = 0.0;
 	weight += sqrt((texelFetch(qHistogram, ivec2(0, int(pvalue.r)), 0).r/dividerQ)/(texelFetch(pHistogram, ivec2(0, int(pvalue.r)), 0).r/dividerP));
@@ -38,6 +38,6 @@ void main()
 	float yComp = iposition.y*normalizer;
 
   	out_Color = vec4(xComp, yComp, normalizer, 1.0);
-  	//out_Color = vec4(iposition, normalizer, weight);
+  	//out_Color = vec4(-0.5* (dist2(vec2(center), vec2(iposition))),( (float(dimensions.x)*float(dimensions.x)) /16.0), weight , normalizer);
   	//out_Color = texelFetch(pHistogram, ivec2(0, 0), 0);//vec4(weight);
 }
