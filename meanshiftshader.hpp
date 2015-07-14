@@ -3,7 +3,7 @@
 
 #include <tucano.hpp>
 
-#define NBINS 16
+#define NBINS 32
 
 namespace Effects
 {
@@ -202,12 +202,12 @@ public:
         //std::cout<<"histogram: lineFbo contents"<<std::endl;
         //THE DIVIDER TERM GETS CANCELLED OUT IN THE WEIGHT CALCULATION ------------------- IMPORTANT
 
-        for(int dbinIndex = 0; dbinIndex < NBINS; dbinIndex++)
-        {
-            temp = lineFbo->readPixel(0, Eigen::Vector2i(0, dbinIndex));
-            *divider += temp[0]+temp[1]+temp[2];
-            /**std::cout<<" H Bin "<<dbinIndex<<": R:"<<temp[0]<<" G:"<<temp[1]<<" B:"<<temp[2]<<" "<<temp[3]<<std::endl;/**/
-        }
+        // for(int dbinIndex = 0; dbinIndex < NBINS; dbinIndex++)
+        // {
+        //     temp = lineFbo->readPixel(0, Eigen::Vector2i(0, dbinIndex));
+        //     *divider += temp[0]+temp[1]+temp[2];
+        //     /**std::cout<<" H Bin "<<dbinIndex<<": R:"<<temp[0]<<" G:"<<temp[1]<<" B:"<<temp[2]<<" "<<temp[3]<<std::endl;/**/
+        // }
         
         //------------------------------------------------------------- ------------------- IMPORTANT
 
@@ -272,7 +272,7 @@ public:
     /**
      * @brief Calculates the meanshift vector    
      */
-    virtual Eigen::Vector2i meanshift (Eigen::Vector2i* corner, Eigen::Vector2i* spread)
+    virtual Eigen::Vector2f meanshift (Eigen::Vector2i* corner, Eigen::Vector2i* spread)
     {
         //Calculate pixel values-------------------------------------------------
 
@@ -289,8 +289,8 @@ public:
         meanshiftshader.setUniform("qHistogram", (lineFboQ->getTexture(0))->bind());//qHistogramTexture->bind());
         meanshiftshader.setUniform("pHistogram", (lineFboP->getTexture(0))->bind());//pHistogramTexture->bind());
         meanshiftshader.setUniform("viewport", frameViewport);
-        meanshiftshader.setUniform("dividerP", dividerP);
-        meanshiftshader.setUniform("dividerQ", dividerQ);
+        //meanshiftshader.setUniform("dividerP", dividerP);
+        //meanshiftshader.setUniform("dividerQ", dividerQ);
         meanshiftshader.setUniform("lowerCorner", lowerCorner);
 
 
@@ -359,52 +359,17 @@ public:
         int intY = (int)round(yComponent);
 
         Eigen::Vector2i newCenter(intX, intY);
+        Eigen::Vector2f newCenterF(xComponent, yComponent);
         Eigen::Vector2i meanShiftVector = newCenter-center;
+        Eigen::Vector2f meanShiftVectorF = newCenterF - Eigen::Vector2f(center[0],center[1]);
         //std::cout<<"New center: "<<newCenter<<"\n meanshift vector: "<<meanShiftVector<<std::endl;
 
         *corner += meanShiftVector;
         *spread += meanShiftVector;
         lowerCorner += meanShiftVector;
         center = newCenter;
-        /*
-        //
-        Eigen::Vector4f temp;
-        float xComponent = 0.0;
-        float yComponent = 0.0;
-        float divider = 0.0;
-        
-        temp = lineFbo->readPixel(0, Eigen::Vector2i(0, 0));
 
-        //
-        divider = temp[2];
-        xComponent += temp[0];
-        yComponent += temp[1];
-
-        for (int i = 1; i < lineSize; ++i)
-        {
-            temp = lineFbo->readPixel(0, Eigen::Vector2i(lineSize, 0));
-
-            divider += temp[2];
-            xComponent += temp[0];
-            yComponent += temp[1];
-        }
-
-        
-        xComponent /= divider;
-        yComponent /= divider;
-
-        Eigen::Vector2f meanShiftVector(xComponent, yComponent);
-
-        *corner += meanShiftVector;
-        *spread += meanShiftVector;
-        center += meanShiftVector;
-        */
-
-        Tucano::Texture* swap =  qHistogramTexture;
-        qHistogramTexture = pHistogramTexture;
-        pHistogramTexture = swap;
-
-        return meanShiftVector;
+        return meanShiftVectorF;
     }
 
     Tucano::Texture* roiPointer ()
@@ -452,153 +417,4 @@ private:
 
 }
 
-
-
 #endif
-
-// deprecated function
-
-// virtual void histogram (Tucano::Texture* frame, Tucano::Texture* hTex, float* divider)
-//     {
-//         //std::cout<<"histogram: Calculate pixel values"<<std::endl;
-//         //Calculate pixel values-------------------------------------------------
-
-//         //bind regionFbo
-//         regionFbo->clearAttachments();
-//         regionFbo->bindRenderBuffer(0);
-
-//         pshader.bind();
-
-//         pshader.setUniform("frameTexture", frame->bind());
-//         pshader.setUniform("center", center);
-//         pshader.setUniform("dimensions", regionDimensions);
-
-//         //render
-//         quad.render();
-
-//         pshader.unbind();
-
-//         frame->unbind();
-//         regionFbo->unbind();
-
-//         //std::cout<<"histogram: Sum up histogram to one line"<<std::endl;
-//         //Sum up histogram to one line-------------------------------------------
-//         GLuint readUnit = (regionFbo->getTexture(0))->bind();
-//         glBindImageTexture(readUnit, (regionFbo->getTexture(0))->texID(), 0, GL_FALSE, 0, GL_READ_WRITE,
-//                        GL_R32F);
-//         GLuint writeUnit = hTex->bind();
-//         glBindImageTexture(writeUnit, hTex->texID(), 0, GL_FALSE, 0, GL_READ_WRITE,
-//                        GL_RGBA32F);
-
-//         histogramshader.bind();
-
-//         histogramshader.setUniform("region", (GLint)readUnit);
-//         histogramshader.setUniform("histogram", (GLint)writeUnit);//if error, cast to GLint
-//         pshader.setUniform("dimensions", regionDimensions);
-
-//         //render
-//         glDispatchCompute(1,1,1);
-
-//         glBindImageTexture(0, (regionFbo->getTexture(0))->texID(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-//         glBindImageTexture(0, hTex->texID(), 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA32F);
-//         glBindImageTexture(0, 0, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-
-//         (regionFbo->getTexture(0))->unbind();
-//         hTex->unbind();
-
-//         histogramshader.unbind();
-
-//         Tucano::Misc::errorCheckFunc(__FILE__, __LINE__);
-
-//         //std::cout<<"histogram: CPU: sum up and build histogram to texture"<<std::endl;
-//         //CPU: sum up and build histogram to texture-----------------------------
-//         //Fetch histogram from GPU
-        
-//         hTex->bind();
-
-//         if (histogramRaw) delete histogramRaw;
-//         histogramRaw = new float[3*NBINS*4];
-//         std::cout<<"histogram: debug pre "<<histogramRaw[0]<<std::endl;
-//         //std::cout<<"histogram: divider "<<hist[0]<<std::endl;
-//         //for (int i = 0; i < 3*NBINS*4; ++i)
-//         //{
-//         //    hist[i] = 42;
-//         //}
-
-//         glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-
-//         glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_FLOAT, histogramRaw);
-
-//         Tucano::Misc::errorCheckFunc(__FILE__, __LINE__);
-
-//         hTex->unbind();
-//         *divider = 0;
-//         //for (int i = 0; i < NBINS*3; ++i)
-//         //{
-//         //    *divider += histogramRaw[i];
-//         //}
-//         std::cout<<"histogram: debug pos "<<histogramRaw[0]<<std::endl;
-        
-
-//         /*
-//         std::cout<<"histogram: clean histogramRaw array"<<std::endl;
-//         //clean histogramRaw array
-//         for (int i = 0; i < NBINS*3; ++i)
-//         {
-//             std::cout<<i<<std::endl;
-//             histogramRaw[i] = 0.0;
-//         }
-
-//         //
-//         Eigen::Vector4f temp;
-//         float divider = 0.0;
-//         int bin[3];
-        
-//         std::cout<<"histogram: read first pixel."<<std::endl;
-//         temp = lineFbo->readPixel(0, Eigen::Vector2i(0, 0));
-//         std::cout<<"pixel values"<<temp[0]<<" "<<temp[1]<<" "<<temp[2]<<" "<<temp[3]<<std::endl;
-
-//         std::cout<<"histogram: calculate the first histogram values"<<std::endl;
-//         //calculate the first histogram values
-//         divider = temp[3];
-//         bin[0] = (int) (3*floor(temp[0]));
-//         histogramRaw[bin[0]] += temp[3];
-//         bin[1] = (int) (3*floor(temp[1])+1);
-//         histogramRaw[bin[1]] += temp[3];
-//         bin[2] = (int) (3*floor(temp[2])+2);
-//         histogramRaw[bin[2]] += temp[3];
-
-//         std::cout<<"histogram: calculate the rest of the histogram values"<<std::endl;
-//         std::cout<<"lineSize: "<<lineSize<<std::endl;
-//         //calculate the rest of the histogram values
-//         for (int j = 1; j < lineSize; ++j)
-//         {
-//             std::cout<<j<<std::endl;
-
-//             temp = lineFbo->readPixel(0, Eigen::Vector2i(j, 0));
-
-//             divider += temp[3];
-//             bin[0] = (int) (3*floor(temp[0]));
-//             bin[1] = (int) (3*floor(temp[1])+1);
-//             bin[2] = (int) (3*floor(temp[2])+2);
-            
-//             std::cout<<"pixel values"<<temp[0]<<" "<<temp[1]<<" "<<temp[2]<<" "<<temp[3]<<std::endl;
-//             std::cout<<"bins"<<bin[0]<<" "<<bin[1]<<" "<<bin[2]<<std::endl;
-
-//             histogramRaw[bin[0]] += temp[3];
-//             histogramRaw[bin[1]] += temp[3];
-//             histogramRaw[bin[2]] += temp[3];
-//         }
-
-//         std::cout<<"histogram: divide all histogram values"<<std::endl;
-//         //divide all histogram values
-//         for (int k = 0; k < NBINS*3; ++k)
-//         {
-//             histogramRaw[k] /= divider;
-//         }
-
-//         std::cout<<"histogram: CPU: sum up and build histogram to texture"<<std::endl;
-//         //update hTex with histogramRaw
-//         hTex->update(histogramRaw);
-//         */
-//     }

@@ -154,6 +154,15 @@ void GLWidget::paintGL (void)
             meanShift.meanshift(&ROIcorner, &ROIspread);
             // //std::cout<<"corner & spread: after: \nc:"<<ROIcorner<<"\n & \ns:"<<ROIspread<<std::endl;
             //regionDefined = false;
+            meanShift.histogramP(frameTexture);
+            Eigen::Vector2f mS = meanShift.meanshift(&ROIcorner, &ROIspread);
+            int iter = 1;
+            while (mS.norm() > 1 && iter < 30){
+                meanShift.histogramP(frameTexture);
+                mS = meanShift.meanshift(&ROIcorner, &ROIspread);
+                iter++;
+            }
+            //std::cout<<" "<<iter;
         }
     }
 

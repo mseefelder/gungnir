@@ -6,7 +6,7 @@ out vec4 out_Color;
 uniform sampler2D pValues;
 uniform ivec2 dimensions;
 
-#define NBINS 16
+#define NBINS 32
 
 void main()
 {	

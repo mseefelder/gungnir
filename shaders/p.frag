@@ -9,7 +9,7 @@ uniform ivec2 dimensions;
 uniform ivec2 viewport;
 uniform ivec2 lowerCorner;
 
-#define NBINS 16
+#define NBINS 32
 
 float dist2(vec2 a, vec2 b)
 {
@@ -32,8 +32,12 @@ void main()
 	vec3 bin = vec3(1.0*ivec3(255*pixel.xyz/(256/NBINS)));
 
 	//Kernel value:
-	float value = exp( -0.5*(dist2(vec2(center), vec2(iposition))/(float(dimensions.x)*float(dimensions.x)/16.0)) );
-	//float value = 0.5*dist2(vec2(center), position)/(float(dimensions.x)*float(dimensions.x)/16.0);
+	//float value = exp( -0.5*(dist2(vec2(center), vec2(iposition))/(float(dimensions.x)*float(dimensions.x)/16.0)) );
+	float value = exp( -0.5 * (
+		 ( (float(center.x)-float(iposition.x))*(float(center.x)-float(iposition.x))/((float(dimensions.x)*float(dimensions.x))/16.0) ) 
+		 + 
+		 ( (float(center.y)-float(iposition.y))*(float(center.y)-float(iposition.y))/((float(dimensions.y)*float(dimensions.y))/16.0) ) 
+		 ) );
 
 	//Output
 	out_Color = vec4(bin.xyz, value);
