@@ -10,10 +10,10 @@ GLWidget::GLWidget(QWidget *parent) : Tucano::QtPlainWidget(parent)
 	camera = NULL;
     //frame = NULL;
     nextCameraIndex = 0;
-    maxCamIndex = 10;
+    maxCamIndex = 50;
 
-    ROIcorner = Eigen::Vector2f(0.0,0.0);
-    ROIspread = Eigen::Vector2f(0.0,0.0);
+    ROIcorner = Eigen::Vector2i(0,0);
+    ROIspread = Eigen::Vector2i(0,0);
 }
 
 GLWidget::~GLWidget()
@@ -35,6 +35,15 @@ void GLWidget::initialize (void)
     {
     	throw;
     }
+    ///find and set camera to read from the first working webcam
+    //try
+    //{
+    //    nextCameraIndex = findWorkingCam(&camera, nextCameraIndex);
+    //}
+    //catch (exception& e)
+    //{
+    //    throw;
+    //}
 
     ///initialize frame container
     //frame = new cv::Mat;
@@ -139,12 +148,21 @@ void GLWidget::paintGL (void)
         }
         else
         {
-            //rendertexture.renderTexture(*(meanShift.roiPointer()), meanShift.viewport());//debug
+            // //rendertexture.renderTexture(*(meanShift.roiPointer()), meanShift.viewport());//debug
             meanShift.histogramP(frameTexture);
-            //std::cout<<"corner & spread: before: \nc:"<<ROIcorner<<"\n & \ns:"<<ROIspread<<std::endl;
+            // //std::cout<<"corner & spread: before: \nc:"<<ROIcorner<<"\n & \ns:"<<ROIspread<<std::endl;
             meanShift.meanshift(&ROIcorner, &ROIspread);
-            //std::cout<<"corner & spread: after: \nc:"<<ROIcorner<<"\n & \ns:"<<ROIspread<<std::endl;
-            regionDefined = false;
+            // //std::cout<<"corner & spread: after: \nc:"<<ROIcorner<<"\n & \ns:"<<ROIspread<<std::endl;
+            //regionDefined = false;
+            meanShift.histogramP(frameTexture);
+            Eigen::Vector2f mS = meanShift.meanshift(&ROIcorner, &ROIspread);
+            int iter = 1;
+            while (mS.norm() > 1 && iter < 30){
+                meanShift.histogramP(frameTexture);
+                mS = meanShift.meanshift(&ROIcorner, &ROIspread);
+                iter++;
+            }
+            //std::cout<<" "<<iter;
         }
     }
 
@@ -166,10 +184,17 @@ void GLWidget::paintGL (void)
 void GLWidget::mousePressEvent (QMouseEvent * event)
 {
     setFocus ();
-    Eigen::Vector2f screen_pos (
-        ((2*((float)event->x()/this->width()))-1.0)
+    //markROI = true;
+    
+    //Eigen::Vector2f screen_pos (
+    //    ((2*((float)event->x()/this->width()))-1.0)
+    //    , 
+    //    ((-2*((float)event->y()/this->height()))+1.0)
+    //    );
+    Eigen::Vector2i screen_pos (
+        (event->x())
         , 
-        ((-2*((float)event->y()/this->height()))+1.0)
+        abs(event->y()-this->height())
         );
 
     if (event->modifiers() & Qt::ShiftModifier){}
@@ -195,10 +220,15 @@ void GLWidget::mousePressEvent (QMouseEvent * event)
  */
 void GLWidget::mouseMoveEvent (QMouseEvent * event)
 {
-    Eigen::Vector2f screen_pos (
-        ((2*((float)event->x()/this->width()))-1.0)
+    //Eigen::Vector2f screen_pos (
+    //    ((2*((float)event->x()/this->width()))-1.0)
+    //    , 
+    //    ((-2*((float)event->y()/this->height()))+1.0)
+    //    );
+    Eigen::Vector2i screen_pos (
+        (event->x())
         , 
-        ((-2*((float)event->y()/this->height()))+1.0)
+        abs(event->y()-this->height())
         );
 
     if (event->modifiers() & Qt::ShiftModifier && event->buttons() & Qt::LeftButton){}
@@ -222,10 +252,15 @@ void GLWidget::mouseMoveEvent (QMouseEvent * event)
  */
 void GLWidget::mouseReleaseEvent (QMouseEvent * event)
 {
-    Eigen::Vector2f screen_pos (
-        ((2*((float)event->x()/this->width()))-1.0)
+    //Eigen::Vector2f screen_pos (
+    //    ((2*((float)event->x()/this->width()))-1.0)
+    //    , 
+    //    ((-2*((float)event->y()/this->height()))+1.0)
+    //    );
+    Eigen::Vector2i screen_pos (
+        (event->x())
         , 
-        ((-2*((float)event->y()/this->height()))+1.0)
+        abs(event->y()-this->height())
         );
 
     if (event->button() == Qt::LeftButton)
@@ -242,6 +277,7 @@ void GLWidget::mouseReleaseEvent (QMouseEvent * event)
     {
         
     }
+    std::cout<<ROIcorner[0]<<","<<ROIcorner[1]<<" & "<<ROIspread[0]<<","<<ROIspread[1]<<std::endl;
 }
 
 /*

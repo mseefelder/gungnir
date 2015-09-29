@@ -65,11 +65,23 @@ public:
      * Renders the given texture using a proxy geometry, a quad the size of the viewport
      * to hold the texture.
      */
-    void renderTexture (Eigen::Vector2i viewport, Eigen::Vector2f firstCorner, Eigen::Vector2f spread)
+    void renderTexture (Eigen::Vector2i viewport, Eigen::Vector2i firstCorner, Eigen::Vector2i spread)
     {
+        internalFirstCorner = Eigen::Vector2f(
+       ((2*((float)firstCorner[0]/(float)viewport[0]))-1.0)
+       , 
+       ((2*((float)firstCorner[1]/(float)viewport[1]))-1.0)
+       );
+
+       internalSpread = Eigen::Vector2f(
+       ((2*((float)spread[0]/(float)viewport[0]))-1.0)
+       , 
+       ((2*((float)spread[1]/(float)viewport[1]))-1.0)
+       );
+
         glViewport(0, 0, viewport[0], viewport[1]);
 
-        setWarpMatrix(&firstCorner, &spread);
+        setWarpMatrix(&internalFirstCorner, &internalSpread);
 
         shader.bind();
         shader.setUniform("warpMatrix", warpQuad);
@@ -109,6 +121,8 @@ private:
     /// Matrix to scale and translate the quad on screen coordinates
     Eigen::Matrix4f warpQuad;
     Eigen::Vector2f scale;
+    Eigen::Vector2f internalSpread;
+    Eigen::Vector2f internalFirstCorner;
 };
 
 }

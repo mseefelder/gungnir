@@ -14,16 +14,16 @@ void main()
 	vec3 components = vec3(0.0);
 	if(widthIsMax)
 	{
-		for(k = 0; k<dimensions.x; k++)
+		for(k = 0; k<dimensions.y; k++)
 		{
-			components += texelFetch(pvalues, ivec2(gl_FragCoord.y, k), 0).rgb;//texture(pvalues, vec2(gl_FragCoord.y/dimensions.y, k/dimensions.y)).rgb;//
+			components += texture(pvalues, vec2(gl_FragCoord.y/dimensions.y, k/dimensions.y)).rgb;//texelFetch(pvalues, ivec2(gl_FragCoord.y, k), 0).rgb;
 		}
 	}
 	else
 	{
-		for(k = 0; k<dimensions.y; k++)
+		for(k = 0; k<dimensions.x; k++)
 		{
-			components += texelFetch(pvalues, ivec2(k, gl_FragCoord.y), 0).rgb;//texture(pvalues, vec2(k/dimensions.y, gl_FragCoord.y/dimensions.y)).rgb;//
+			components += texture(pvalues, vec2(k/dimensions.y, gl_FragCoord.y/dimensions.y)).rgb;//texelFetch(pvalues, ivec2(k, gl_FragCoord.y), 0).rgb;
 		}
 	}
 	

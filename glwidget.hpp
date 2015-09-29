@@ -94,8 +94,8 @@ private:
     Tucano::Texture* frameTexture;
 
     /// Region of interest parameters
-    Eigen::Vector2f ROIcorner; //where the rectangle begins
-    Eigen::Vector2f ROIspread; //how far does it spread in each axis
+    Eigen::Vector2i ROIcorner; //where the rectangle begins
+    Eigen::Vector2i ROIspread; //how far does it spread in each axis
     Eigen::Vector2i viewport;
 
     //FUNCTIONS
