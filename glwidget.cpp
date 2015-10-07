@@ -49,7 +49,7 @@ void GLWidget::initialize (void)
     //frame = new cv::Mat;
 
     // the default is /shaders from your running dir
-    string shaders_dir("./shaders/");
+    string shaders_dir("../shaders/");
 
     rendertexture.setShadersDir(shaders_dir);
     rendertexture.initialize();

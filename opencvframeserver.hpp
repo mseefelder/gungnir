@@ -1,6 +1,9 @@
 #ifndef __GLWIDGET__
 #define __GLWIDGET__
 
+#include <GL/glew.h>
+#include <texture.hpp>
+
 #include <matbuffer.hpp>
 #include <cameraexception.hpp>
 #include <Eigen/Dense>
@@ -29,7 +32,7 @@ public:
 
     FrameServer()
     {
-        nextCameraIndex = 0;
+        nextCameraIndex = -1;
         maxCamIndex = 50;
         size = Eigen::Vector2i(0,0);
     }
@@ -52,26 +55,31 @@ public:
         {
             throw;
         }
-        buf = new MatBuffer(60);
-        frame = new cv::Mat;
+        buf = new MatBuffer(60);    }
+
+    bool captureFrame()
+    {
+        return buf->push(camera);
+        //if(camera->read(temp))
+        //    if (!(temp.empty()))
+        //        imwrite("test.png", temp);
+        //        return buf->push(temp);
+        //return false;
     }
 
-    void captureFrame()
+    bool serveFrame()//Tucano::Texture* texture)
     {
-        buf.push(camera);
+        //if(buf->pop(frame))
+            //texture->update(frame->ptr());
+        return buf->pop(frame);
     }
 
-    void serveFrame(Tucano::Texture* texture)
+    bool firstFrame()
     {
-        if(buf->pop(frame))
-            texture->update(frame->ptr());
-    }
 
-    void firstFrame(Tucano::Texture* texture)
-    {
         if(buf->pop(frame))
         {
-            texture->create(GL_TEXTURE_2D, GL_RGB, frame->cols, frame->rows, GL_BGR, GL_UNSIGNED_BYTE, frame->ptr());
+            //imwrite("test2.png", frame);
             return true;
         }
         else
@@ -85,7 +93,7 @@ public:
         return size;
     }
 
-    cv::Mat getFramePointer()
+    cv::Mat* getFramePointer()
     {
         return &frame;
     }
@@ -95,7 +103,8 @@ private:
     cv::VideoCapture* camera;
     
     ///frame where we read the camera frames to
-    cv::Mat* frame;
+    cv::Mat frame;
+    cv::Mat temp;
     
     ///if we want to get another camera, call findWorkingCam starting from here
     int nextCameraIndex;
@@ -122,6 +131,7 @@ private:
             if ((*targetCamera)->read(scratch) != false)
             {
                 std::cout<<"Found camera! \n w: "<<scratch.cols<<"; h: "<<scratch.rows<<std::endl;
+                imwrite("scratch.png", scratch);
                 //Store next index
                 starter = targetCameraIndex++;
                 //Return camera dimensions

@@ -5,11 +5,13 @@
 #include <opencvframeserver.hpp>
 #include "GLFW/glfw3.h"
 
-#define WINDOW_WIDTH 640
-#define WINDOW_HEIGHT 480
+//#define WINDOW_WIDTH 640
+//#define WINDOW_HEIGHT 480
 
 TrackerWindow *trackerWindow;
 FrameServer frameServer;
+int WINDOW_WIDTH = 100;
+int WINDOW_HEIGHT = 100;
 
 void initialize (void)
 {
@@ -50,12 +52,16 @@ static void cursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 	*/
 }
 
-void frameGrabber()
+void frameGrabber(GLFWwindow* main_window)
 {
+	std::cout<<"Thread running!"<<std::endl;
 	while (!glfwWindowShouldClose(main_window))
 	{
-		frameServer.captureFrame();
+		if(frameServer.captureFrame()){
+			std::this_thread::sleep_for (std::chrono::seconds(1));
+		}
 	}
+	std::cout<<"Thread exiting..."<<std::endl;
 }
 
 
@@ -88,21 +94,48 @@ int main(int argc, char *argv[])
    	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
    	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
+   	frameServer.initialize();
+
+	Eigen::Vector2i dimensions = frameServer.getSize();
+	WINDOW_WIDTH = dimensions[0];
+	WINDOW_HEIGHT = dimensions[1];
+
+   	glfwSetWindowSize(main_window, WINDOW_WIDTH, WINDOW_HEIGHT);
+
 	initialize();
-	frameServer.initialize();
 
-	std::thread t1(frameGrabber);
+	//while(!frameServer.captureFrame()){}
+	//std::cout<<"Frame captured"<<std::endl;
+	//while(!frameServer.firstFrame()){}
+	//std::cout<<"First frame"<<std::endl;
 
+	/**
+
+	std::thread t1(frameGrabber,main_window);
+
+	//first render
+	while(!frameServer.firstFrame()){
+		//std::cout<<"!";
+	}
+	std::cout<<std::endl<<"Popped frame!"<<std::endl;
+	glfwMakeContextCurrent(main_window);
+	trackerWindow->setAndPaint(frameServer.getFramePointer());
+	glfwSwapBuffers(main_window);
+
+	glfwPollEvents();
+
+	//render/processing loop
 	while (!glfwWindowShouldClose(main_window))
 	{
 		glfwMakeContextCurrent(main_window);
-		frameServer.serveFrame(trackerWindow->texPointer());
-		trackerWindow->paintGL();
+		frameServer.serveFrame();
+		trackerWindow->paintGL(frameServer.getFramePointer());
 		glfwSwapBuffers(main_window);
 
 		glfwPollEvents();
 	}
 
+	/**/
 	glfwDestroyWindow(main_window);
 	glfwTerminate();
 	return 0;
