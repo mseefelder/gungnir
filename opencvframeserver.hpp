@@ -55,7 +55,8 @@ public:
         {
             throw;
         }
-        buf = new MatBuffer(60);    }
+        buf = new MatBuffer(60);    
+    }
 
     bool captureFrame()
     {
@@ -65,6 +66,17 @@ public:
         //        imwrite("test.png", temp);
         //        return buf->push(temp);
         //return false;
+    }
+
+    bool captureFlipped()
+    {
+        if(buf->push(camera))
+        {
+            cv::flip(frame, frame, 0);
+            return true;
+        }
+
+        return false;
     }
 
     bool serveFrame()//Tucano::Texture* texture)
@@ -79,7 +91,7 @@ public:
 
         if(buf->pop(frame))
         {
-            //imwrite("test2.png", frame);
+            imwrite("firstframe.png", frame);
             return true;
         }
         else
@@ -131,7 +143,7 @@ private:
             if ((*targetCamera)->read(scratch) != false)
             {
                 std::cout<<"Found camera! \n w: "<<scratch.cols<<"; h: "<<scratch.rows<<std::endl;
-                imwrite("scratch.png", scratch);
+                imwrite("findWorkingCam.png", scratch);
                 //Store next index
                 starter = targetCameraIndex++;
                 //Return camera dimensions

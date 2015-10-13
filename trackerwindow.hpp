@@ -54,8 +54,14 @@ public:
     	if(!initd)
 	        return false;
 
+	    imwrite("setAndPaint.png", *frame);
+
 		glClearColor(1.0, 1.0, 1.0, 0.0);
 	    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
+	    std::cout<<frame->cols<<" x "<<frame->rows<<std::endl;
+
+	    frameTexture = new Tucano::Texture;
 		
 	    try
 	    {
@@ -83,7 +89,8 @@ public:
      **/
     virtual void paintGL(cv::Mat* frame)
     {
-	 	if(!initd)
+	 	
+		if(!initd)
 	        return;
 
 		glClearColor(1.0, 1.0, 1.0, 0.0);

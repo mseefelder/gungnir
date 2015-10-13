@@ -12,6 +12,7 @@ TrackerWindow *trackerWindow;
 FrameServer frameServer;
 int WINDOW_WIDTH = 100;
 int WINDOW_HEIGHT = 100;
+bool threadrunning = false;
 
 void initialize (void)
 {
@@ -55,13 +56,14 @@ static void cursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 void frameGrabber(GLFWwindow* main_window)
 {
 	std::cout<<"Thread running!"<<std::endl;
-	while (!glfwWindowShouldClose(main_window))
+	while (threadrunning)//(!glfwWindowShouldClose(main_window))
 	{
-		if(frameServer.captureFrame()){
-			std::this_thread::sleep_for (std::chrono::seconds(1));
+		if(frameServer.captureFlipped()){
+			//std::this_thread::sleep_for (std::chrono::seconds(1));
 		}
 	}
 	std::cout<<"Thread exiting..."<<std::endl;
+	threadrunning = false;
 }
 
 
@@ -104,13 +106,22 @@ int main(int argc, char *argv[])
 
 	initialize();
 
-	//while(!frameServer.captureFrame()){}
-	//std::cout<<"Frame captured"<<std::endl;
-	//while(!frameServer.firstFrame()){}
-	//std::cout<<"First frame"<<std::endl;
-
+	while(!frameServer.captureFrame()){}
+	std::cout<<"Frame captured"<<std::endl;
+	while(!frameServer.firstFrame()){}
+	std::cout<<"First frame"<<std::endl;
+	
 	/**
+	//simple test
+	imwrite("onmain.png", *(frameServer.getFramePointer()));
+	trackerWindow->setAndPaint(frameServer.getFramePointer());
+	glfwSwapBuffers(main_window);
+	std::cin.ignore();
+	/**/
 
+	/**/
+	//4 real
+	threadrunning = true;
 	std::thread t1(frameGrabber,main_window);
 
 	//first render
@@ -134,9 +145,11 @@ int main(int argc, char *argv[])
 
 		glfwPollEvents();
 	}
+	threadrunning = false;
 
 	/**/
 	glfwDestroyWindow(main_window);
 	glfwTerminate();
+	t1.join();
 	return 0;
 }
