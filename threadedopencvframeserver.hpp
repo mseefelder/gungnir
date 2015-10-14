@@ -4,6 +4,7 @@
 #include <GL/glew.h>
 #include <texture.hpp>
 
+#include <matbuffer.hpp>
 #include <cameraexception.hpp>
 #include <Eigen/Dense>
 
@@ -24,6 +25,9 @@ protected:
     /// Camera dimensions
     Eigen::Vector2i size;
 
+    /// Frame buffer
+    MatBuffer* buf;
+
 public:
 
     FrameServer()
@@ -41,7 +45,7 @@ public:
     /**
      * @brief Initializes the shader effect
      */
-    void initialize()
+    void initialize(int buffersize)
     {
         try
         {
@@ -50,40 +54,50 @@ public:
         catch (exception& e)
         {
             throw;
-        }    
+        }
+        buf = new MatBuffer(buffersize);    
     }
 
     bool captureFrame()
     {
-        camera->read(temp);
-        return !temp.empty();
+        return buf->push(camera);
+        //if(camera->read(temp))
+        //    if (!(temp.empty()))
+        //        imwrite("test.png", temp);
+        //        return buf->push(temp);
+        //return false;
     }
 
     bool captureFlipped()
     {
-        camera->read(temp);
-        cv::flip(temp, temp, 0);
-        return !temp.empty();
+        if(buf->push(camera))
+        {
+            cv::flip(frame, frame, 0);
+            return true;
+        }
+
+        return false;
     }
 
     bool serveFrame()//Tucano::Texture* texture)
     {
-        if(captureFlipped())
-        {
-            frame = temp;
-            return true;
-        } 
-        return false;
+        //if(buf->pop(frame))
+            //texture->update(frame->ptr());
+        return buf->pop(frame);
     }
 
     bool firstFrame()
     {
-        if(captureFlipped())
+
+        if(buf->pop(frame))
         {
-            frame = temp;
+            imwrite("firstframe.png", frame);
             return true;
-        } 
-        return false;
+        }
+        else
+        {
+            return false;
+        }
     }
 
     Eigen::Vector2i getSize()

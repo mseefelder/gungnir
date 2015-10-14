@@ -1,12 +1,16 @@
+//#define THREAD 60
+
 #include <iostream>
 #include <tucano.hpp>
 #include <thread>
 #include <trackerwindow.hpp>
-#include <opencvframeserver.hpp>
 #include "GLFW/glfw3.h"
 
-//#define WINDOW_WIDTH 640
-//#define WINDOW_HEIGHT 480
+#ifdef THREAD
+#include <threadedopencvframeserver.hpp>
+#else
+#include <opencvframeserver.hpp>
+#endif
 
 TrackerWindow *trackerWindow;
 FrameServer frameServer;
@@ -34,37 +38,40 @@ static void mouseButtonCallback (GLFWwindow* window, int button, int action, int
 	{
 		double xpos, ypos;
 		glfwGetCursorPos(window, &xpos, &ypos);
-		Eigen::Vector2f mouse(xpos, ypos);
+		Eigen::Vector2i mouse(xpos, abs(ypos-WINDOW_HEIGHT));
+		trackerWindow->startROI(mouse);
 	}
 	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
 	{
 		double xpos, ypos;
 		glfwGetCursorPos(window, &xpos, &ypos);
-		Eigen::Vector2f mouse(xpos, ypos);
+		Eigen::Vector2i mouse(xpos, abs(ypos-WINDOW_HEIGHT));
+		trackerWindow->endROI(mouse);
 	}
 }
 static void cursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 {
-	/*
-	if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS)
+	if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
 	{
-		trackerWindow->getCamera()->rotate(Eigen::Vector2f(xpos, ypos));
+		Eigen::Vector2i mouse(xpos, abs(ypos-WINDOW_HEIGHT));
+		trackerWindow->updateROI(mouse);
 	}
-	*/
 }
 
+#ifdef THREAD
 void frameGrabber(GLFWwindow* main_window)
 {
 	std::cout<<"Thread running!"<<std::endl;
 	while (threadrunning)//(!glfwWindowShouldClose(main_window))
 	{
 		if(frameServer.captureFlipped()){
-			//std::this_thread::sleep_for (std::chrono::seconds(1));
+			std::this_thread::sleep_for (std::chrono::milliseconds(16));
 		}
 	}
 	std::cout<<"Thread exiting..."<<std::endl;
 	threadrunning = false;
 }
+#endif
 
 
 int main(int argc, char *argv[])
@@ -96,7 +103,11 @@ int main(int argc, char *argv[])
    	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
    	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
+   	#ifdef THREAD
+   	frameServer.initialize(THREAD);
+   	#else
    	frameServer.initialize();
+   	#endif
 
 	Eigen::Vector2i dimensions = frameServer.getSize();
 	WINDOW_WIDTH = dimensions[0];
@@ -121,8 +132,10 @@ int main(int argc, char *argv[])
 
 	/**/
 	//4 real
+	#ifdef THREAD
 	threadrunning = true;
 	std::thread t1(frameGrabber,main_window);
+	#endif
 
 	//first render
 	while(!frameServer.firstFrame()){
@@ -145,11 +158,15 @@ int main(int argc, char *argv[])
 
 		glfwPollEvents();
 	}
-	threadrunning = false;
-
 	/**/
+	
 	glfwDestroyWindow(main_window);
 	glfwTerminate();
+
+	#ifdef THREAD
+	threadrunning = false;
 	t1.join();
+	#endif
+
 	return 0;
 }
