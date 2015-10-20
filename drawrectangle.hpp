@@ -65,8 +65,9 @@ public:
      * Renders the given texture using a proxy geometry, a quad the size of the viewport
      * to hold the texture.
      */
-    void renderTexture (Eigen::Vector2i viewport, Eigen::Vector2i firstCorner, Eigen::Vector2i spread)
+    void renderTexture (Eigen::Vector2i &viewport, Eigen::Vector2i &firstCorner, Eigen::Vector2i &spread)
     {
+        /**/
         internalFirstCorner = Eigen::Vector2f(
        ((2*((float)firstCorner[0]/(float)viewport[0]))-1.0)
        , 
@@ -79,9 +80,12 @@ public:
        ((2*((float)spread[1]/(float)viewport[1]))-1.0)
        );
 
-        glViewport(0, 0, viewport[0], viewport[1]);
-
         setWarpMatrix(&internalFirstCorner, &internalSpread);
+        /**/
+        
+        //setWarpMatrix(viewport, firstCorner, spread);
+        
+        glViewport(0, 0, viewport[0], viewport[1]);
 
         shader.bind();
         shader.setUniform("warpMatrix", warpQuad);
@@ -94,6 +98,7 @@ public:
         shader.unbind();
     }
 
+    /**/
     void setWarpMatrix (Eigen::Vector2f* firstCorner, Eigen::Vector2f* spread)
     {
         warpQuad = Eigen::Matrix4f::Zero();
@@ -109,6 +114,25 @@ public:
         //uniform matrix value
         warpQuad(3,3) = 1;
     }
+    /**/
+
+    /*
+    void setWarpMatrix (Eigen::Vector2i &viewport, Eigen::Vector2i &firstCorner, Eigen::Vector2i &spread)
+    {
+        warpQuad = Eigen::Matrix4f::Zero();
+
+        //Scale
+        scale << abs((spread)[0]-(firstCorner)[0])/(viewport[0]*1.0), abs((spread)[1]-(firstCorner)[1])/(viewport[1]*1.0);
+        warpQuad(0,0) = scale[0];//-(*firstCorner)[0]; //x
+        warpQuad(1,1) = scale[1];//-(*firstCorner)[1]; //y
+        warpQuad(2,2) = 1;
+        //Translation
+        warpQuad(0,3) = firstCorner[0]/(0.5*viewport[0])-1.0;//(*firstCorner)[0] + (scale[0]);//(2*(*firstCorner)[0]-1.0) + (scale[0]);//(0.25 + (*firstCorner)[0])-0.5; //x OK
+        warpQuad(1,3) = firstCorner[1]/(0.5*viewport[1])-1.0;//(*firstCorner)[1] - (scale[1]);//(-2*(*firstCorner)[1]+1.0) - (scale[1]);//((1.0-(*firstCorner)[1])-0.25)-0.5; //y
+        //uniform matrix value
+        warpQuad(3,3) = 1;
+    }
+    */
 
 private:
 

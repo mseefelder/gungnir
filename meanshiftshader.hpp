@@ -2,16 +2,15 @@
 #define __MEANSHIFT___
 
 #include <tucano.hpp>
+#include "tracker.hpp"
 
 #define NBINS 32
-
-namespace Effects
-{
+//#define DEBUGVIEW
 
 /**
  * @brief Picks a 3D position from screen position
  */
-class Meanshift : public Tucano::Effect
+class Meanshift : public Tracker
 {
 
 public:
@@ -129,12 +128,17 @@ public:
         std::cout<<"regionDimensions: x="<<regionDimensions[0]<<" y="<<regionDimensions[1]<<"\n";
         std::cout<<"center: x="<<center[0]<<" y="<<center[1]<<std::endl;
 
+        #ifdef DEBUGVIEW
+            debugQuad.createQuad();
+            loadShader(debugShader,"fulldbug");
+        #endif
+
         Tucano::Misc::errorCheckFunc(__FILE__, __LINE__);
 
     }
 
     virtual void histogram (Tucano::Texture* frame, Tucano::Framebuffer* lineFbo, float* divider)
-    {
+    {   
         //std::cout<<"histogram: Calculate pixel values"<<std::endl;
         //Calculate pixel values-------------------------------------------------
 
@@ -210,53 +214,6 @@ public:
         // }
         
         //------------------------------------------------------------- ------------------- IMPORTANT
-
-        /*
-        std::cout<<"histogram: calculate the first histogram values"<<std::endl;
-        //calculate the first histogram values
-        divider = temp[3];
-        bin[0] = (int) (3*floor(temp[0]));
-        histogramRaw[bin[0]] += temp[3];
-        bin[1] = (int) (3*floor(temp[1])+1);
-        histogramRaw[bin[1]] += temp[3];
-        bin[2] = (int) (3*floor(temp[2])+2);
-        histogramRaw[bin[2]] += temp[3];
-        */
-        //std::cout<<"histogram: calculate the rest of the histogram values"<<std::endl;
-        //std::cout<<"lineSize: "<<lineSize<<std::endl;
-        //calculate the rest of the histogram values
-        //for (int j = 1; j < lineSize; ++j)
-
-        // //std::cout<<"histogram: clean histogramRaw array"<<std::endl;
-        // //clean histogramRaw array
-        // for (int i = 0; i < NBINS*3; ++i)
-        // {
-        //     //std::cout<<i<<std::endl;
-        //     histogramRaw[i] = 0.0;
-        // }
-        // //std::cout<<"Fill histogramRaw"<<std::endl;
-        // for (int binIndex = 0; binIndex < NBINS; binIndex++)
-        // {
-        //     temp = lineFbo->readPixel(0, Eigen::Vector2i(0, binIndex));
-        //     *divider += temp[0]+temp[1]+temp[2];
-        //     histogramRaw[3*binIndex] = temp[0];
-        //     histogramRaw[(3*binIndex)+1] = temp[1];
-        //     histogramRaw[(3*binIndex)+2] = temp[2];
-        // }
-        // //std::cout<<"divider: "<<divider<<std::endl;
-
-        // /*
-        // std::cout<<"histogram: divide all histogram values"<<std::endl;
-        // //divide all histogram values
-        // for (binIndex = 0; binIndex < NBINS; ++binIndex)
-        // {
-        //     histogramRaw[binIndex] /= divider;
-        // }
-        // */
-
-        // //std::cout<<"histogram: CPU: sum up and build histogram to texture"<<std::endl;
-        // //update hTex with histogramRaw
-        // hTex->update(histogramRaw);
     }
 
     virtual void histogramQ (Tucano::Texture* frame)
@@ -267,6 +224,22 @@ public:
     virtual void histogramP (Tucano::Texture* frame)
     {
         histogram(frame, lineFboP, &dividerP);
+    }
+
+    float histogramDiff ()
+    {
+        float diff = 0.0;
+        float qSize = 0.0;
+        Eigen::Vector4f tempP;
+        Eigen::Vector4f tempQ;
+        for (int i = 0; i < NBINS; ++i)
+        {
+            tempP = lineFboP->readPixel(0, Eigen::Vector2i(0, i));
+            tempQ = lineFboQ->readPixel(0, Eigen::Vector2i(0, i));
+            qSize += (tempQ[0]*tempQ[0])+(tempQ[1]*tempQ[1])+(tempQ[2]*tempQ[2]);
+            diff += (tempP[0]-tempQ[0])*(tempP[0]-tempQ[0])+(tempP[1]-tempQ[1])*(tempP[1]-tempQ[1])+(tempP[2]-tempQ[2])*(tempP[2]-tempQ[2]);
+        }
+        return sqrt(diff)/sqrt(qSize);
     }
 
     /**
@@ -382,6 +355,42 @@ public:
         return regionDimensions;
     }
 
+    virtual void firstFrame (Eigen::Vector2i viewport, Eigen::Vector2i firstCorner, Eigen::Vector2i spread, Tucano::Texture* frame)
+    {
+        setRegionDimensionsAndCenter(viewport, firstCorner, spread);
+        histogramQ(frame);
+
+    }
+
+    virtual void track (Tucano::Texture* frame, Eigen::Vector2i* corner, Eigen::Vector2i* spread, int itermax)
+    {
+        float shift = 2.0;
+        int iter = 1;
+        while (shift > 1.0 && iter < itermax){
+            histogramP(frame);
+            shift = meanshift(corner, spread).norm();
+            iter++;
+        }
+
+        #ifdef DEBUGVIEW
+            glViewport(0,0,frameViewport[0], frameViewport[1]);
+            debugShader.bind();
+            debugShader.setUniform("frameTexture", frame->bind());
+            debugShader.setUniform("dimensions", regionDimensions);
+            debugShader.setUniform("lowerCorner", lowerCorner);
+            debugQuad.render();
+            debugShader.unbind();
+        #endif
+
+        float d = histogramDiff();
+        if (d > 0.09 && d < 0.1)
+        {
+            histogramQ(frame);
+        }
+        std::cout<<histogramDiff()<<std::endl;
+        
+    }
+
 private:
 
     Tucano::Shader pshader;
@@ -413,8 +422,12 @@ private:
     float dividerQ;
 
     Tucano::Mesh quad;
-};
 
-}
+    #ifdef DEBUGVIEW
+        Tucano::Mesh debugQuad;
+        Tucano::Shader debugShader;
+    #endif
+
+};
 
 #endif

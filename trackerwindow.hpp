@@ -111,34 +111,20 @@ public:
 		// renders the given image, not that we are setting a fixed viewport that follows the widgets size
 	    // so it may not be scaled correctly with the image's size (just to keep the example simple)
 	    Eigen::Vector2i viewport (viewportSize[0], viewportSize[1]);
-	    rendertexture.renderTexture(*frameTexture, viewport);
+
+	    //if(!qValueReady)
+	    	rendertexture.renderTexture(*frameTexture, viewport);
 
 	    if(ROIDefined)
 	    {
 	        if(!qValueReady)
 	        {
-	            meanShift.setRegionDimensionsAndCenter(viewport, ROIcorner, ROIspread);
-	            meanShift.histogramQ(frameTexture);
+	            meanShift.firstFrame(viewport, ROIcorner, ROIspread, frameTexture);
 	            qValueReady = true;
 	        }
 	        else
 	        {
-	            // //rendertexture.renderTexture(*(meanShift.roiPointer()), meanShift.viewport());//debug
-	            meanShift.histogramP(frameTexture);
-	            // //std::cout<<"corner & spread: before: \nc:"<<ROIcorner<<"\n & \ns:"<<ROIspread<<std::endl;
-	            meanShift.meanshift(&ROIcorner, &ROIspread);
-	            // //std::cout<<"corner & spread: after: \nc:"<<ROIcorner<<"\n & \ns:"<<ROIspread<<std::endl;
-	            //regionDefined = false;
-	            meanShift.histogramP(frameTexture);
-	            Eigen::Vector2f mS = meanShift.meanshift(&ROIcorner, &ROIspread);
-	            int iter = 1;
-	            while (mS.norm() > 1 && iter < 500){
-	                meanShift.histogramP(frameTexture);
-	                mS = meanShift.meanshift(&ROIcorner, &ROIspread);
-	                iter++;
-	            }
-	            if(iter > 100)
-	            	std::cout<<" "<<iter;
+	            meanShift.track(frameTexture, &ROIcorner, &ROIspread, 100);
 	        }
 	    }
 
@@ -191,7 +177,7 @@ private:
     Effects::drawRectangle rect;
 
     /// Process meanshift
-    Effects::Meanshift meanShift;
+    Meanshift meanShift;
 
     /// Texture to hold input image
     Tucano::Texture* frameTexture;
