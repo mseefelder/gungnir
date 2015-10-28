@@ -32,12 +32,12 @@ void main()
 	//result.y = 0.5;
 	//result.z = 0.5;
 	//result = hsv2rgb(result);
-	out_Color = vec4(vec3(result.z), 1.0);
+	//out_Color = vec4(vec3(result.z), 1.0);
 	
 	//float resNorm = (max(result.z,max(result.x,result.y))+min(result.z,min(result.x,result.y)))/2.0;//length(result);
 	//out_Color = vec4(0.,0.,0.,1.0);
-	//if(resNorm > (frameNorm)/255.)
-	//	out_Color = vec4(1.0);
+	if(result.z > (frameNorm)/255.)
+		out_Color = vec4(1.0);
 
     //out_Color = vec4(result, 1.0);
 }

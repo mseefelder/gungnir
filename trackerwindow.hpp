@@ -109,9 +109,9 @@ public:
 
 	    // NEURAL
 	    	cv::Scalar frameMean = cv::mean(*frame);
-	    	//double frameNorm = (max(max(frameMean[0],frameMean[1]),frameMean[2])+min(min(frameMean[0],frameMean[1]),frameMean[2]))/2.0;
+	    	double frameNorm = (max(max(frameMean[0],frameMean[1]),frameMean[2])+min(min(frameMean[0],frameMean[1]),frameMean[2]))/2.0;
 			//double frameNorm = cv::norm(frameMean);
-			double frameNorm = getThresh(frameMean);
+			//double frameNorm = getThresh(frameMean);
 
 		frameTexture->update(frame->ptr());
 
