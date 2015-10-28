@@ -109,8 +109,10 @@ public:
 
 	    // NEURAL
 	    	cv::Scalar frameMean = cv::mean(*frame);
-	    	double frameNorm = (max(max(frameMean[0],frameMean[1]),frameMean[2])+min(min(frameMean[0],frameMean[1]),frameMean[2]))/2.0;//cv::norm(frameMean);
-		
+	    	//double frameNorm = (max(max(frameMean[0],frameMean[1]),frameMean[2])+min(min(frameMean[0],frameMean[1]),frameMean[2]))/2.0;
+			//double frameNorm = cv::norm(frameMean);
+			double frameNorm = getThresh(frameMean);
+
 		frameTexture->update(frame->ptr());
 
 		// renders the given image, not that we are setting a fixed viewport that follows the widgets size
@@ -168,6 +170,56 @@ public:
 			ROIDefined = true;
 			qValueReady = false;
 		}
+	}
+
+	double getThresh(cv::Scalar meanPixel)
+	{
+		int max, min;
+		double result;
+
+		max = (meanPixel[0]>meanPixel[1])?0:1;
+		max = (meanPixel[max]>meanPixel[2])?max:2;
+
+		min = (meanPixel[0]<meanPixel[1])?0:1;
+		min = (meanPixel[max]<meanPixel[2])?max:2;
+
+		switch(max)
+		{
+			//Blue is max
+			case 0:
+				result = 4.0 + (meanPixel[2]-meanPixel[1])/(meanPixel[max]-meanPixel[min]);
+				result *= 60.0;
+				if (result < 0.0)
+				{
+					result += 360.0;
+				}
+				result = result/360.0;
+				break;
+
+			//Green is max
+			case 1:
+				result = 2.0 + (meanPixel[0]-meanPixel[2])/(meanPixel[max]-meanPixel[min]);
+				result *= 60.0;
+				if (result < 0.0)
+				{
+					result += 360.0;
+				}
+				result = result/360.0;
+				break;
+
+			//Red is max
+			case 2:
+				result = (meanPixel[1]-meanPixel[0])/(meanPixel[max]-meanPixel[min]);
+				result *= 60.0;
+				if (result < 0.0)
+				{
+					result += 360.0;
+				}
+				result = result/360.0;
+				break;
+		}
+
+		return result;
 	}
 
 private:
