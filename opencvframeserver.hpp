@@ -76,6 +76,17 @@ public:
         return false;
     }
 
+    double serveFrameMean()//Tucano::Texture* texture)
+    {
+        if(captureFlipped())
+        {
+            cv::Scalar frameMean = cv::mean(temp);
+            frame = temp;
+            return cv::norm(frameMean);
+        } 
+        return -1.;
+    }
+
     bool firstFrame()
     {
         if(captureFlipped())

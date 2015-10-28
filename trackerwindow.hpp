@@ -3,9 +3,9 @@
 
 #include <GL/glew.h>
 
-#include <rendertexture.hpp>
+#include "singlepass.hpp"
 #include "drawrectangle.hpp"
-#include "meanshiftshader.hpp"
+#include "neuralDaniel.hpp"
 
 #include <opencv/cv.hpp>
 #include <highgui.h>
@@ -89,7 +89,8 @@ public:
 		// renders the given image, not that we are setting a fixed viewport that follows the widgets size
 	    // so it may not be scaled correctly with the image's size (just to keep the example simple)
 	    Eigen::Vector2i viewport (viewportSize[0], viewportSize[1]);
-	    rendertexture.renderTexture(*frameTexture, viewport);
+	    double d = 1.0;
+	    rendertexture.render(*frameTexture, viewport, d);
 
 	    return true;
     }
@@ -105,6 +106,10 @@ public:
 
 		glClearColor(1.0, 1.0, 1.0, 0.0);
 	    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
+	    // NEURAL
+	    	cv::Scalar frameMean = cv::mean(*frame);
+	    	double frameNorm = (max(max(frameMean[0],frameMean[1]),frameMean[2])+min(min(frameMean[0],frameMean[1]),frameMean[2]))/2.0;//cv::norm(frameMean);
 		
 		frameTexture->update(frame->ptr());
 
@@ -113,18 +118,18 @@ public:
 	    Eigen::Vector2i viewport (viewportSize[0], viewportSize[1]);
 
 	    //if(!qValueReady)
-	    	rendertexture.renderTexture(*frameTexture, viewport);
+	    	rendertexture.render(*frameTexture, viewport, frameNorm);
 
 	    if(ROIDefined)
 	    {
 	        if(!qValueReady)
 	        {
-	            meanShift.firstFrame(viewport, ROIcorner, ROIspread, frameTexture);
+	            meanShift.firstFrame(viewport, ROIcorner, ROIspread, frameTexture, frameNorm);
 	            qValueReady = true;
 	        }
 	        else
 	        {
-	            meanShift.track(frameTexture, &ROIcorner, &ROIspread, 100);
+	            meanShift.track(frameTexture, &ROIcorner, &ROIspread, 100, frameNorm);
 	        }
 	    }
 
@@ -171,7 +176,7 @@ private:
     //Effects::Tracker tracker;
 
 	/// Render image effect (simply renders a texture)
-    Effects::RenderTexture rendertexture;
+    SinglePass rendertexture;
 
     /// Draw ROI as a rectangle
     Effects::drawRectangle rect;
