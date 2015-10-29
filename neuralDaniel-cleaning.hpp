@@ -22,17 +22,7 @@ public:
     {
         widthIsMax = false;
         isSet = false;
-
-        regionFbo = NULL;
-        meanShiftFbo = NULL;
-        lineFboP = NULL;
-        lineFboQ = NULL;
-        sumFbo = NULL;
-
-        histogramRaw = NULL;
-
-        qHistogramTexture = NULL;
-        pHistogramTexture = NULL;
+        trackInfo = NULL;
     }
 
     /**
@@ -46,24 +36,12 @@ public:
     virtual void initialize (void)
     {
         //shaders
-        loadShader(pshader, "p");
-        loadShader(histogramshader, "histogram");
-        loadShader(meanshiftshader, "meanshift");
-        loadShader(sumshader, "sum");
-
-        //raw histogram array
-        histogramRaw = new float[3*NBINS];
+        loadShader(binarizeShader, "binarize");
+        loadShader(debugShader, "debug");
 
         //flags
         isSet = false;
         widthIsMax = false;
-
-        //framebuffers
-        regionFbo = NULL; //depends on region size //new Tucano::Framebuffer(1, NBINS, 1, GL_TEXTURE_2D, GL_RGB32F, GL_RGB, GL_FLOAT)
-        lineFboP = NULL; //depends on region size
-        lineFboQ = NULL;
-        meanShiftFbo = NULL;
-        sumFbo = NULL;
 
         lineSize = 0;
 
@@ -110,13 +88,47 @@ public:
             loadShader(debugShader,"fulldbug");
         #endif
 
+        //create ssbo that will support the entire tracking
+        int numPixels = (regionDimensions[0]*regionDimensions[1]);
+        int remain = numPixels%3;  
+        int NRAM = (remain==0)?numPixels/3:((numPixels-remain)/3)+1;
+        trackInfo = new ShaderStorageBufferInt(6+2*NRAM);
+
         Tucano::Misc::errorCheckFunc(__FILE__, __LINE__);
 
     }
 
-    Tucano::Texture* roiPointer ()
+    void generateDescriptor(Tucano::Texture* frame, Eigen::Vector2i &firstCorner, Eigen::Vector2i &spread)
     {
-        return (regionFbo->getTexture(0));
+        //set binarization parameters
+        binarize(frame, firstCorner, spread);
+        //debug render binarized
+        debug(frame, firstCorner, spread);
+    }
+
+    void binarize(Tucano::Texture* frame, Eigen::Vector2i &firstCorner, Eigen::Vector2i &spread)
+    {
+        binarizeShader.bind();
+
+        binarizeShader.setUniform("frameTexture", frame->bind());
+        binarizeShader.setUniform("center", center);
+        binarizeShader.setUniform("lowerCorner", lowerCorner);
+        binarizeShader.setUniform("dimensions", regionDimensions);
+
+        quad.render();
+        binarizeShader.unbind();
+        frame->unbind();
+    }
+
+    void debug(Tucano::Texture* frame, Eigen::Vector2i &firstCorner, Eigen::Vector2i &spread)
+    {
+        debugShader.bind();
+
+        debugShader.setUniform("frameTexture", frame->bind());
+
+        quad.render();
+        debugShader.unbind();
+        frame->unbind();
     }
 
     Eigen::Vector2i viewport()
@@ -126,35 +138,30 @@ public:
 
     virtual void firstFrame (Eigen::Vector2i viewport, Eigen::Vector2i firstCorner, Eigen::Vector2i spread, Tucano::Texture* frame, double& frameNorm)
     {
+
         setRegionDimensionsAndCenter(viewport, firstCorner, spread);
-        
+        trackInfo->clear();
+        trackInfo->bindBase(0);
+        generateDescriptor(frame, firstCorner, spread);
+        trackInfo->unbindBase();
     }
 
-    virtual void track (Tucano::Texture* frame, Eigen::Vector2i* corner, Eigen::Vector2i* spread, int itermax, double& frameNorm)
+    virtual void track (Tucano::Texture* frame, Eigen::Vector2i* firstCorner, Eigen::Vector2i* spread, int itermax, double& frameNorm)
     {
-        
+        trackInfo->clear();
+        trackInfo->bindBase(0);
+        //debug(frame, *firstCorner, *spread);
+        generateDescriptor(frame, *firstCorner, *spread);
+        trackInfo->unbindBase();
     }
 
 private:
 
-    Tucano::Shader pshader;
-    Tucano::Shader histogramshader;
-    Tucano::Shader meanshiftshader;
-    Tucano::Shader sumshader;
+    Tucano::Shader binarizeShader;
+    Tucano::Shader debugShader;
 
     bool widthIsMax;
     bool isSet;
-
-    Tucano::Framebuffer* regionFbo;
-    Tucano::Framebuffer* meanShiftFbo;
-    Tucano::Framebuffer* lineFboP;
-    Tucano::Framebuffer* lineFboQ;
-    Tucano::Framebuffer* sumFbo;
-
-    float* histogramRaw;
-
-    Tucano::Texture* qHistogramTexture;
-    Tucano::Texture* pHistogramTexture;
 
     Eigen::Vector2i regionDimensions;
     Eigen::Vector2i center;
@@ -162,8 +169,8 @@ private:
     Eigen::Vector2i lowerCorner;
 
     int lineSize;
-    float dividerP;
-    float dividerQ;
+
+    ShaderStorageBufferInt* trackInfo;
 
     Tucano::Mesh quad;
 

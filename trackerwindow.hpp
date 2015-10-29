@@ -5,7 +5,7 @@
 
 #include "singlepass.hpp"
 #include "drawrectangle.hpp"
-#include "neuralDaniel.hpp"
+#include "neuralDaniel-cleaning.hpp"
 
 #include <opencv/cv.hpp>
 #include <highgui.h>
@@ -119,7 +119,7 @@ public:
 	    // so it may not be scaled correctly with the image's size (just to keep the example simple)
 	    Eigen::Vector2i viewport (viewportSize[0], viewportSize[1]);
 
-	    //if(!qValueReady)
+	    if(!ROIDefined)
 	    	rendertexture.render(*frameTexture, viewport, frameNorm);
 
 	    if(ROIDefined)

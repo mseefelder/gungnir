@@ -1,8 +1,15 @@
 #version 430
 
-uniform sampler2D imageTexture;
-uniform ivec2 viewportSize;
-uniform float frameNorm;
+uniform sampler2D frameTexture;
+
+layout (binding = 0) buffer trackInfo
+{
+	int nRam;
+	int nPixel;
+	int avgLuminance;
+	ivec3 avgPixel;
+	int maskDescriptor[];
+};
 
 out vec4 out_Color;
 
@@ -27,8 +34,14 @@ vec3 hsv2rgb(vec3 c)
 void main()
 {
 	ivec2 texCoord = ivec2(gl_FragCoord.xy);
-	vec3 result = texelFetch(imageTexture, texCoord, 0).rgb;
-	result = rgb2hsv(result);
+	vec3 result = texelFetch(frameTexture, texCoord, 0).rgb;
+	vec3 resultHsv = rgb2hsv(result);
+	
+	vec3 avgHsv = rgb2hsv(vec3(avgPixel/(float(nPixel)*255.)));
 
-	out_Color = (result.z < (frameNorm)/255.)?vec4(1.0):vec4(0.0,0.0,0.0,1.0);
+	//out_Color = vec4(vec3(avgPixel/(float(nPixel)*255.)),1.0);
+	//out_Color = vec4(vec3(resultHsv.z),1.0);
+
+	out_Color = (resultHsv.z<avgHsv.z)?vec4(1.0):vec4(0.,0.,0.,1.);
+
 }
