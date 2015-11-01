@@ -38,7 +38,7 @@ vec3 hsv2rgb(vec3 c)
 void main()
 {
 	ivec2 texCoord = ivec2(gl_FragCoord.xy);
-	vec3 result = texture(frameTexture, texCoord, 0).rgb;
+	vec3 result = texelFetch(frameTexture, texCoord, 0).rgb;
 	vec3 resultHsv = rgb2hsv(result);
 
 	ivec3 avgPixelPrev = ivec3(0.);

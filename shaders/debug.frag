@@ -40,7 +40,7 @@ void main()
 	vec3 avgHsv = rgb2hsv(vec3(avgPixel/(float(nPixel)*255.)));
 
 	//out_Color = vec4(vec3(avgPixel/(float(nPixel)*255.)),1.0);
-	//out_Color = vec4(vec3(resultHsv.z),1.0);
+	//out_Color = vec4(result,1.0);
 
 	out_Color = (resultHsv.z<avgHsv.z)?vec4(1.0):vec4(0.,0.,0.,1.);
 
