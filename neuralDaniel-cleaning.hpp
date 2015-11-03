@@ -148,10 +148,10 @@ public:
 
     virtual void track (Tucano::Texture* frame, Eigen::Vector2i* firstCorner, Eigen::Vector2i* spread, int itermax, double& frameNorm)
     {
-        trackInfo->clear();
+        //trackInfo->clear();
         trackInfo->bindBase(0);
-        //debug(frame, *firstCorner, *spread);
-        generateDescriptor(frame, *firstCorner, *spread);
+        debug(frame, *firstCorner, *spread);
+        //generateDescriptor(frame, *firstCorner, *spread);
         trackInfo->unbindBase();
     }
 
