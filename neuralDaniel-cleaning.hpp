@@ -23,6 +23,7 @@ public:
         widthIsMax = false;
         isSet = false;
         trackInfo = NULL;
+        maskAndFrame = NULL;
     }
 
     /**
@@ -36,7 +37,10 @@ public:
     virtual void initialize (void)
     {
         //shaders
-        loadShader(binarizeShader, "binarize");
+        loadShader(binConstantShader, "binarize");
+        //loadShader(binarizeShader, "binFrame");
+        //loadShader(descriptorShader, "descriptor");
+        //loadShader(classifierShader, "classifier");
         loadShader(debugShader, "debug");
 
         //flags
@@ -92,7 +96,27 @@ public:
         int numPixels = (regionDimensions[0]*regionDimensions[1]);
         int remain = numPixels%3;  
         int NRAM = (remain==0)?numPixels/3:((numPixels-remain)/3)+1;
+
+        int indexes[numPixels];
+        for (int i = 0; i < numPixels; ++i)
+        {
+            indexes[i] = i;
+        }
+        int mask[2*numPixels];
+        std::random_device rd; // obtain a random number from hardware
+        std::mt19937 eng(rd()); // seed the generator
+        std::uniform_int_distribution<> distr(0, numPixels-1); // define the range
+        int currIndex;
+        for (int i = 0; i < numPixels; ++i)
+        {
+            currIndex = indexes[distr(eng)];
+            mask[i] = 0;
+            mask[i+numPixels] = indexes[currIndex];
+            indexes[currIndex] = 0;//<-----------------------------------------------------------------------------------------
+        }
+
         trackInfo = new ShaderStorageBufferInt(6+2*NRAM);
+        maskAndFrame = new ShaderStorageBufferInt(2*numPixels);
 
         Tucano::Misc::errorCheckFunc(__FILE__, __LINE__);
 
@@ -108,15 +132,15 @@ public:
 
     void binarize(Tucano::Texture* frame, Eigen::Vector2i &firstCorner, Eigen::Vector2i &spread)
     {
-        binarizeShader.bind();
+        binConstantShader.bind();
 
-        binarizeShader.setUniform("frameTexture", frame->bind());
-        binarizeShader.setUniform("center", center);
-        binarizeShader.setUniform("lowerCorner", lowerCorner);
-        binarizeShader.setUniform("dimensions", regionDimensions);
+        binConstantShader.setUniform("frameTexture", frame->bind());
+        binConstantShader.setUniform("center", center);
+        binConstantShader.setUniform("lowerCorner", lowerCorner);
+        binConstantShader.setUniform("dimensions", regionDimensions);
 
         quad.render();
-        binarizeShader.unbind();
+        binConstantShader.unbind();
         frame->unbind();
     }
 
@@ -142,22 +166,29 @@ public:
         setRegionDimensionsAndCenter(viewport, firstCorner, spread);
         trackInfo->clear();
         trackInfo->bindBase(0);
+        maskAndFrame->bindBase(1);
         generateDescriptor(frame, firstCorner, spread);
         trackInfo->unbindBase();
+        maskAndFrame->unbindBase();
     }
 
     virtual void track (Tucano::Texture* frame, Eigen::Vector2i* firstCorner, Eigen::Vector2i* spread, int itermax, double& frameNorm)
     {
         //trackInfo->clear();
         trackInfo->bindBase(0);
+        maskAndFrame->bindBase(1);
         debug(frame, *firstCorner, *spread);
         //generateDescriptor(frame, *firstCorner, *spread);
         trackInfo->unbindBase();
+        maskAndFrame->unbindBase();
     }
 
 private:
 
-    Tucano::Shader binarizeShader;
+    Tucano::Shader binConstantShader;
+    //Tucano::Shader binarizeShader;
+    //Tucano::Shader descriptorShader;
+    //Tucano::Shader classifierShader;
     Tucano::Shader debugShader;
 
     bool widthIsMax;
@@ -171,6 +202,7 @@ private:
     int lineSize;
 
     ShaderStorageBufferInt* trackInfo;
+    ShaderStorageBufferInt* maskAndFrame;
 
     Tucano::Mesh quad;
 

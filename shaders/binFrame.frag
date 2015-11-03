@@ -9,7 +9,7 @@ layout (binding = 0) buffer trackInfo
 	int nPixel;
 	int nope;
 	ivec3 avgPixel;
-	int descriptor[];
+	int maskDescriptor[];
 };
 
 layout (binding = 1) buffer maskBuffer
@@ -41,20 +41,11 @@ void main()
 {
 	ivec2 texCoord = ivec2(gl_FragCoord.xy);
 	vec3 result = texelFetch(frameTexture, texCoord, 0).rgb;
+	
 	vec3 resultHsv = rgb2hsv(result);
 	vec3 avgHsv = rgb2hsv(vec3(avgPixel/(float(nPixel)*255.)));
 
-	//out_Color = (resultHsv.z<avgHsv.z)?vec4(1.0):vec4(0.,0.,0.,1.);
-
-	if(resultHsv.z<avgHsv.z && texCoord.x>=lowerCorner.x && texCoord.x<=(lowerCorner.x+dimensions.x) && texCoord.y>=lowerCorner.y && texCoord.y<=(lowerCorner.y+dimensions.y))
-	{
-		//the nPixel first elements of mask[] are the binarized frame
-		int rawRamAddress = mask[nPixel+(texCoord.x+(height*texCoord.y))];
-			//each int in the ram descriptor array contains 10 rams
-			//int ramAddress = rawRamAddress/10;
-			//int ramExponent = rawRamAddress - ramAddress*10;
-			//atomicAdd(descriptor[ramAddress],pow(2,ramExponent));
-		atomicExchange(descriptor[rawRamAddress], 1);
-	}
+	int address = (texCoord.x+(height*texCoord.y));
+	(resultHsv.z<avgHsv.z)?atomicExchange(mask[address], 1):atomicExchange(mask[address], 1);
 
 }
