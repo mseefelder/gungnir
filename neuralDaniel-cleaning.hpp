@@ -24,6 +24,7 @@ public:
         isSet = false;
         trackInfo = NULL;
         maskAndFrame = NULL;
+        NRAM = 0;
     }
 
     /**
@@ -95,21 +96,29 @@ public:
         //create ssbo that will support the entire tracking
         int numPixels = (regionDimensions[0]*regionDimensions[1]);
         int remain = numPixels%3;  
-        int NRAM = (remain==0)?numPixels/3:((numPixels-remain)/3)+1;
+        NRAM = (remain==0)?numPixels/3:((numPixels-remain)/3)+1;
 
         int indexes[numPixels];
         for (int i = 0; i < numPixels; ++i)
         {
             indexes[i] = i;
         }
-        int* mask = new int[2*numPixels];
+
+        int maskBufferSize = ((numPixels)
+                +(frameViewport[0]*frameViewport[1])
+                +((frameViewport[0]-regionDimensions[0])*(frameViewport[1]-regionDimensions[1])));
+
+        int mask[maskBufferSize];
         std::random_device rd; // obtain a random number from hardware
         std::mt19937 eng(rd()); // seed the generator
         std::uniform_int_distribution<> distr(0, numPixels-1); // define the range
         int currIndex, mistery;
-        for (int i = 0; i < numPixels; ++i)
+        for (int i = 0; i < maskBufferSize; ++i)
         {
             mask[i] = 0;
+        }
+        for (int i = 0; i < numPixels; ++i)
+        {
             mistery = distr(eng);
             currIndex = indexes[mistery];
             while(currIndex<0)
@@ -119,14 +128,17 @@ public:
                     mistery = 0;
                 currIndex = indexes[mistery];
             }
-            mask[i+numPixels] = currIndex;
+            mask[i] = currIndex;
             indexes[mistery] = -1;
-            mask[i+2*numPixels] = 0;
         }
+        for (int i = 0; i < numPixels; ++i)
+        {
+            std::cout<<mask[i]<<", ";
+        }
+        std::cout<<std::endl;
 
         trackInfo = new ShaderStorageBufferInt(6+2*NRAM);
-        maskAndFrame = new ShaderStorageBufferInt(3*numPixels, mask);
-        //delete [] mask;
+        maskAndFrame = new ShaderStorageBufferInt(maskBufferSize, mask);
         Tucano::Misc::errorCheckFunc(__FILE__, __LINE__);
 
     }
@@ -163,7 +175,8 @@ public:
         binarizeShader.bind();
 
         binarizeShader.setUniform("frameTexture", bindingPoint);
-        binarizeShader.setUniform("height", regionDimensions[1]);
+        binarizeShader.setUniform("dimensions", regionDimensions);
+        binarizeShader.setUniform("viewport", frameViewport);
 
         quad.render();
         binarizeShader.unbind();
@@ -174,19 +187,26 @@ public:
 
     void classify(Tucano::Texture* frame, Eigen::Vector2i &firstCorner, Eigen::Vector2i &spread)
     {
+        //glViewport(0, 0, frameViewport[0]-regionDimensions[0], frameViewport[1]-regionDimensions[1]);
+        glViewport(0, 0, (frameViewport[0]-regionDimensions[0])*NRAM, 
+            (frameViewport[1]-regionDimensions[1])*NRAM);
         classifierShader.bind();
 
-        classifierShader.setUniform("height", regionDimensions[1]);
+        classifierShader.setUniform("dimensions", regionDimensions);
+        classifierShader.setUniform("viewport", frameViewport);
 
         quad.render();
         classifierShader.unbind();
+        glViewport(0, 0, frameViewport[0], frameViewport[1]);
     }
 
     void debug(Tucano::Texture* frame, Eigen::Vector2i &firstCorner, Eigen::Vector2i &spread)
     {
         debugShader.bind();
 
+        debugShader.setUniform("dimensions", regionDimensions);
         debugShader.setUniform("frameTexture", frame->bind());
+        debugShader.setUniform("viewport", frameViewport);
 
         quad.render();
         debugShader.unbind();
@@ -217,6 +237,7 @@ public:
         maskAndFrame->bindBase(1);
         binarize(frame, *firstCorner, *spread);
         classify(frame, *firstCorner, *spread);
+        debug(frame, *firstCorner, *spread);
         trackInfo->unbindBase();
         maskAndFrame->unbindBase();
         //maskAndFrame->printBuffer();
@@ -239,6 +260,7 @@ private:
     Eigen::Vector2i lowerCorner;
 
     int lineSize;
+    int NRAM;
 
     ShaderStorageBufferInt* trackInfo;
     ShaderStorageBufferInt* maskAndFrame;

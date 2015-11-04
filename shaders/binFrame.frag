@@ -1,7 +1,8 @@
 #version 430
 
 uniform sampler2D frameTexture;
-uniform int height;
+uniform ivec2 dimensions;
+uniform ivec2 viewport;
 
 layout (binding = 0) buffer trackInfo
 {
@@ -45,7 +46,7 @@ void main()
 	vec3 resultHsv = rgb2hsv(result);
 	vec3 avgHsv = rgb2hsv(vec3(avgPixel/(float(nPixel)*255.)));
 
-	int address = (texCoord.x+(height*texCoord.y));
-	(resultHsv.z<avgHsv.z)?atomicExchange(mask[address], 1):atomicExchange(mask[address], 1);
+	int address = (texCoord.x+(viewport.x*texCoord.y));
+	(resultHsv.z<avgHsv.z)?atomicExchange(mask[nPixel + address], 1):atomicExchange(mask[nPixel + address], 1);
 
 }

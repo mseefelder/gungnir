@@ -1,6 +1,7 @@
 #version 430
 
-uniform int height;
+uniform ivec2 dimensions;
+uniform ivec2 viewport;
 
 layout (binding = 0) buffer trackInfo
 {
@@ -22,8 +23,29 @@ out vec4 out_Color;
 void main()
 {
 	ivec2 texCoord = ivec2(gl_FragCoord.xy);
+	int thisAddress = texCoord.x + texCoord.y*viewport.x;
+	int ram = int(floor(float(thisAddress)/float((viewport.x-dimensions.x)*(viewport.y-dimensions.y))));
+	int normalizedAddress = thisAddress - ram*((viewport.x-dimensions.x)*(viewport.y-dimensions.y));
 
-	int thisAddress = texCoord.x + texCoord.y*height;
+	int codedAddress;
+	bool matches = true;
+
+	codedAddress = mask[3*ram];
+	matches = matches && mask[nPixel+normalizedAddress+codedAddress]==descriptor[3*ram];
+
+	codedAddress = mask[3*ram+1];
+	matches = matches && mask[nPixel+normalizedAddress+codedAddress]==descriptor[3*ram+1];
+
+	codedAddress = mask[3*ram+2];
+	matches = matches && mask[nPixel+normalizedAddress+codedAddress]==descriptor[3*ram+2];
+
+	if(matches)
+		atomicAdd(mask[nPixel+(viewport.x*viewport.y)+normalizedAddress],1);
+
+	discard;
+
+	/**
+
 	int i = 0;
 	int counter = 0;
 	int score = 0;
@@ -52,5 +74,6 @@ void main()
 	atomicExchange(mask[thisAddress+2*nPixel],score);
 
 	discard;
+	**/
 
 }

@@ -1,6 +1,8 @@
 #version 430
 
 uniform sampler2D frameTexture;
+uniform ivec2 dimensions;
+uniform ivec2 viewport;
 
 layout (binding = 0) buffer trackInfo
 {
@@ -9,6 +11,11 @@ layout (binding = 0) buffer trackInfo
 	int avgLuminance;
 	ivec3 avgPixel;
 	int maskDescriptor[];
+};
+
+layout (binding = 1) buffer maskBuffer
+{
+	int mask[];
 };
 
 out vec4 out_Color;
@@ -39,9 +46,14 @@ void main()
 	
 	vec3 avgHsv = rgb2hsv(vec3(avgPixel/(float(nPixel)*255.)));
 
-	//out_Color = vec4(vec3(avgPixel/(float(nPixel)*255.)),1.0);
-	//out_Color = vec4(result,1.0);
+	float isok = (resultHsv.z<avgHsv.z)?1.0:0.0;
+	int thisAddress = texCoord.x + texCoord.y*viewport.x;
+	float score = float(mask[thisAddress+2*nPixel])/(float(nPixel)/3.0);//mask[thisAddress+nPixel+(viewport.x*viewport.y)]>0?1.0:0.0;
+	vec3 colore = vec3(isok, score, 0.0);
 
-	out_Color = (resultHsv.z<avgHsv.z)?vec4(1.0):vec4(0.,0.,0.,1.);
+	//out_Color = vec4(vec3(avgPixel/(float(nPixel)*255.)),1.0);
+	out_Color = vec4(colore,1.0);
+
+	//out_Color = (resultHsv.z<avgHsv.z)?vec4(1.0):vec4(0.,0.,0.,1.);
 
 }
