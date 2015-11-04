@@ -1,7 +1,8 @@
 #version 430
 
 uniform sampler2D frameTexture;
-uniform int height;
+uniform ivec2 dimensions;
+uniform ivec2 lowerCorner;
 
 layout (binding = 0) buffer trackInfo
 {
@@ -49,7 +50,7 @@ void main()
 	if(resultHsv.z<avgHsv.z && texCoord.x>=lowerCorner.x && texCoord.x<=(lowerCorner.x+dimensions.x) && texCoord.y>=lowerCorner.y && texCoord.y<=(lowerCorner.y+dimensions.y))
 	{
 		//the nPixel first elements of mask[] are the binarized frame
-		int rawRamAddress = mask[nPixel+(texCoord.x+(height*texCoord.y))];
+		int rawRamAddress = mask[nPixel+(texCoord.x+(dimensions.y*texCoord.y))];
 			//each int in the ram descriptor array contains 10 rams
 			//int ramAddress = rawRamAddress/10;
 			//int ramExponent = rawRamAddress - ramAddress*10;

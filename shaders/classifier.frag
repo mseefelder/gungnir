@@ -29,7 +29,7 @@ void main()
 	int score = 0;
 	bool matches = true;
 	int codedAddress;
-	for(i = 0; i<nPixel; n++)
+	for(i = 0; i<nPixel; i++)
 	{
 		//compare
 		codedAddress = mask[nPixel+i];
@@ -49,6 +49,7 @@ void main()
 	{
 		score += matches?1:0;
 	}
+	atomicExchange(mask[thisAddress+2*nPixel],score);
 
 	discard;
 

@@ -1,9 +1,7 @@
 #version 430
 
 uniform sampler2D frameTexture;
-uniform ivec2 center;
 uniform ivec2 dimensions;
-uniform ivec2 viewport;
 uniform ivec2 lowerCorner;
 
 layout (binding = 0) buffer trackInfo

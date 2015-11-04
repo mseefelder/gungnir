@@ -38,9 +38,9 @@ public:
     {
         //shaders
         loadShader(binConstantShader, "binarize");
-        //loadShader(binarizeShader, "binFrame");
-        //loadShader(descriptorShader, "descriptor");
-        //loadShader(classifierShader, "classifier");
+        loadShader(binarizeShader, "binFrame");
+        loadShader(descriptorShader, "descriptor");
+        loadShader(classifierShader, "classifier");
         loadShader(debugShader, "debug");
 
         //flags
@@ -102,22 +102,31 @@ public:
         {
             indexes[i] = i;
         }
-        int mask[2*numPixels];
+        int* mask = new int[2*numPixels];
         std::random_device rd; // obtain a random number from hardware
         std::mt19937 eng(rd()); // seed the generator
         std::uniform_int_distribution<> distr(0, numPixels-1); // define the range
-        int currIndex;
+        int currIndex, mistery;
         for (int i = 0; i < numPixels; ++i)
         {
-            currIndex = indexes[distr(eng)];
             mask[i] = 0;
-            mask[i+numPixels] = indexes[currIndex];
-            indexes[currIndex] = 0;//<-----------------------------------------------------------------------------------------
+            mistery = distr(eng);
+            currIndex = indexes[mistery];
+            while(currIndex<0)
+            {
+                mistery++;
+                if(mistery>=numPixels)
+                    mistery = 0;
+                currIndex = indexes[mistery];
+            }
+            mask[i+numPixels] = currIndex;
+            indexes[mistery] = -1;
+            mask[i+2*numPixels] = 0;
         }
 
         trackInfo = new ShaderStorageBufferInt(6+2*NRAM);
-        maskAndFrame = new ShaderStorageBufferInt(2*numPixels);
-
+        maskAndFrame = new ShaderStorageBufferInt(3*numPixels, mask);
+        //delete [] mask;
         Tucano::Misc::errorCheckFunc(__FILE__, __LINE__);
 
     }
@@ -127,21 +136,50 @@ public:
         //set binarization parameters
         binarize(frame, firstCorner, spread);
         //debug render binarized
-        debug(frame, firstCorner, spread);
+        //debug(frame, firstCorner, spread);
+        descriptorShader.bind();
+        descriptorShader.setUniform("frameTexture", frame->bind());
+        descriptorShader.setUniform("lowerCorner", lowerCorner);
+        descriptorShader.setUniform("dimensions", regionDimensions);
+        quad.render();
+        descriptorShader.unbind();
+        frame->unbind();
     }
 
     void binarize(Tucano::Texture* frame, Eigen::Vector2i &firstCorner, Eigen::Vector2i &spread)
     {
         binConstantShader.bind();
 
-        binConstantShader.setUniform("frameTexture", frame->bind());
+        GLint bindingPoint = frame->bind();
+
+        binConstantShader.setUniform("frameTexture", bindingPoint);
         binConstantShader.setUniform("center", center);
         binConstantShader.setUniform("lowerCorner", lowerCorner);
         binConstantShader.setUniform("dimensions", regionDimensions);
 
         quad.render();
         binConstantShader.unbind();
+
+        binarizeShader.bind();
+
+        binarizeShader.setUniform("frameTexture", bindingPoint);
+        binarizeShader.setUniform("height", regionDimensions[1]);
+
+        quad.render();
+        binarizeShader.unbind();
+    
         frame->unbind();
+
+    }
+
+    void classify(Tucano::Texture* frame, Eigen::Vector2i &firstCorner, Eigen::Vector2i &spread)
+    {
+        classifierShader.bind();
+
+        classifierShader.setUniform("height", regionDimensions[1]);
+
+        quad.render();
+        classifierShader.unbind();
     }
 
     void debug(Tucano::Texture* frame, Eigen::Vector2i &firstCorner, Eigen::Vector2i &spread)
@@ -177,18 +215,19 @@ public:
         //trackInfo->clear();
         trackInfo->bindBase(0);
         maskAndFrame->bindBase(1);
-        debug(frame, *firstCorner, *spread);
-        //generateDescriptor(frame, *firstCorner, *spread);
+        binarize(frame, *firstCorner, *spread);
+        classify(frame, *firstCorner, *spread);
         trackInfo->unbindBase();
         maskAndFrame->unbindBase();
+        //maskAndFrame->printBuffer();
     }
 
 private:
 
     Tucano::Shader binConstantShader;
-    //Tucano::Shader binarizeShader;
-    //Tucano::Shader descriptorShader;
-    //Tucano::Shader classifierShader;
+    Tucano::Shader binarizeShader;
+    Tucano::Shader descriptorShader;
+    Tucano::Shader classifierShader;
     Tucano::Shader debugShader;
 
     bool widthIsMax;
