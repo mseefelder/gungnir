@@ -24,6 +24,7 @@ public:
         isSet = false;
         trackInfo = NULL;
         maskAndFrame = NULL;
+        score = NULL;
         NRAM = 0;
     }
 
@@ -98,15 +99,15 @@ public:
         int remain = numPixels%3;  
         NRAM = (remain==0)?numPixels/3:((numPixels-remain)/3)+1;
 
+        //create mask
         int indexes[numPixels];
         for (int i = 0; i < numPixels; ++i)
         {
             indexes[i] = i;
         }
 
-        int maskBufferSize = ((numPixels)
-                +(frameViewport[0]*frameViewport[1])
-                +((frameViewport[0]-regionDimensions[0])*(frameViewport[1]-regionDimensions[1])));
+        int maskBufferSize = ((numPixels)+(frameViewport[0]*frameViewport[1]));
+                //+((frameViewport[0]-regionDimensions[0])*(frameViewport[1]-regionDimensions[1])));
 
         int mask[maskBufferSize];
         std::random_device rd; // obtain a random number from hardware
@@ -137,16 +138,20 @@ public:
         }
         std::cout<<std::endl;
 
-        trackInfo = new ShaderStorageBufferInt(6+2*NRAM);
+        trackInfo = new ShaderStorageBufferInt(6+numPixels);
         maskAndFrame = new ShaderStorageBufferInt(maskBufferSize, mask);
-        Tucano::Misc::errorCheckFunc(__FILE__, __LINE__);
 
+        int scoreBufferSize = ((frameViewport[0]-regionDimensions[0])*(frameViewport[1]-regionDimensions[1]));
+        //score = new ShaderStorageBufferInt(scoreBufferSize);
+        score = new ShaderStorageBufferInt(frameViewport[0]*frameViewport[1]);
+
+        Tucano::Misc::errorCheckFunc(__FILE__, __LINE__);
     }
 
     void generateDescriptor(Tucano::Texture* frame, Eigen::Vector2i &firstCorner, Eigen::Vector2i &spread)
     {
         //set binarization parameters
-        binarize(frame, firstCorner, spread);
+        firstBinarize(frame, firstCorner, spread);
         //debug render binarized
         //debug(frame, firstCorner, spread);
         descriptorShader.bind();
@@ -158,7 +163,7 @@ public:
         frame->unbind();
     }
 
-    void binarize(Tucano::Texture* frame, Eigen::Vector2i &firstCorner, Eigen::Vector2i &spread)
+    void firstBinarize(Tucano::Texture* frame, Eigen::Vector2i &firstCorner, Eigen::Vector2i &spread)
     {
         binConstantShader.bind();
 
@@ -185,10 +190,24 @@ public:
 
     }
 
+    void binarize(Tucano::Texture* frame, Eigen::Vector2i &firstCorner, Eigen::Vector2i &spread)
+    {
+        binarizeShader.bind();
+
+        binarizeShader.setUniform("frameTexture", frame->bind());
+        binarizeShader.setUniform("dimensions", regionDimensions);
+        binarizeShader.setUniform("viewport", frameViewport);
+
+        quad.render();
+        binarizeShader.unbind();
+    
+        frame->unbind();
+    }
+
     void classify(Tucano::Texture* frame, Eigen::Vector2i &firstCorner, Eigen::Vector2i &spread)
     {
         //glViewport(0, 0, frameViewport[0]-regionDimensions[0], frameViewport[1]-regionDimensions[1]);
-        glViewport(0, 0, (frameViewport[0]-regionDimensions[0])*NRAM, 
+        glViewport(0, 0, (frameViewport[0]-regionDimensions[0]), 
             (frameViewport[1]-regionDimensions[1])*NRAM);
         classifierShader.bind();
 
@@ -232,14 +251,16 @@ public:
 
     virtual void track (Tucano::Texture* frame, Eigen::Vector2i* firstCorner, Eigen::Vector2i* spread, int itermax, double& frameNorm)
     {
-        //trackInfo->clear();
+        score->clear();
         trackInfo->bindBase(0);
         maskAndFrame->bindBase(1);
+        score->bindBase(2);
         binarize(frame, *firstCorner, *spread);
         classify(frame, *firstCorner, *spread);
         debug(frame, *firstCorner, *spread);
         trackInfo->unbindBase();
         maskAndFrame->unbindBase();
+        score->unbindBase();
         //maskAndFrame->printBuffer();
     }
 
@@ -264,6 +285,7 @@ private:
 
     ShaderStorageBufferInt* trackInfo;
     ShaderStorageBufferInt* maskAndFrame;
+    ShaderStorageBufferInt* score;
 
     Tucano::Mesh quad;
 

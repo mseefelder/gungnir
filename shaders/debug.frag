@@ -10,12 +10,17 @@ layout (binding = 0) buffer trackInfo
 	int nPixel;
 	int avgLuminance;
 	ivec3 avgPixel;
-	int maskDescriptor[];
+	int descriptor[];
 };
 
 layout (binding = 1) buffer maskBuffer
 {
 	int mask[];
+};
+
+layout (binding = 2) buffer scoreBuffer
+{
+	int score[];
 };
 
 out vec4 out_Color;
@@ -41,19 +46,52 @@ vec3 hsv2rgb(vec3 c)
 void main()
 {
 	ivec2 texCoord = ivec2(gl_FragCoord.xy);
+	int thisAddress = texCoord.x + texCoord.y*viewport.x;
+	
+	/**
 	vec3 result = texelFetch(frameTexture, texCoord, 0).rgb;
 	vec3 resultHsv = rgb2hsv(result);
 	
 	vec3 avgHsv = rgb2hsv(vec3(avgPixel/(float(nPixel)*255.)));
 
 	float isok = (resultHsv.z<avgHsv.z)?1.0:0.0;
-	int thisAddress = texCoord.x + texCoord.y*viewport.x;
-	float score = float(mask[thisAddress+2*nPixel])/(float(nPixel)/3.0);//mask[thisAddress+nPixel+(viewport.x*viewport.y)]>0?1.0:0.0;
+	float score = (score[thisAddress]==0)?1.0:0.0;//float(mask[thisAddress+2*nPixel])/(float(nPixel)/3.0);
 	vec3 colore = vec3(isok, score, 0.0);
+	**/
 
 	//out_Color = vec4(vec3(avgPixel/(float(nPixel)*255.)),1.0);
-	out_Color = vec4(colore,1.0);
+	//out_Color = vec4(colore,1.0);
+	//out_Color = (thisAddress<(dimensions.x*dimensions.y))?vec4(1.0):vec4(vec3(0.0),1.0);
+	
+	//render descriptor
+	/**
+	int a = (thisAddress<(dimensions.x*dimensions.y))?thisAddress:0;
+	out_Color = (descriptor[a]==1)?vec4(1.0):vec4(vec3(0.0),1.0);
+	**/
+
+	//render mask
+	/**
+	int a = (thisAddress<(nPixel))?thisAddress:0;
+	float value = float(mask[a])/float(nPixel);
+	out_Color = vec4(vec3(value),1.0);
+	**/
+
+	//render binarized
+	/**
+	float value = float(mask[nPixel+thisAddress]);
+	out_Color = vec4(vec3(value),1.0);
+	**/
+
+	//render score
+	/**/
+	out_Color = vec4(vec3(1.0,0.0,0.0),1.0);
+	if(texCoord.x<=(viewport.x-dimensions.x) && texCoord.y<=(viewport.y-dimensions.y))
+	{
+		thisAddress = texCoord.x + texCoord.y*(viewport.x);
+		//out_Color = vec4(vec3(value),1.0);
+		out_Color = (score[thisAddress]>1)?vec4(1.0):vec4(vec3(0.0),1.0);
+	}
+	/**/
 
 	//out_Color = (resultHsv.z<avgHsv.z)?vec4(1.0):vec4(0.,0.,0.,1.);
-
 }

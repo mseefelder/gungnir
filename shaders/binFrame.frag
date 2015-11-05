@@ -41,12 +41,25 @@ vec3 hsv2rgb(vec3 c)
 void main()
 {
 	ivec2 texCoord = ivec2(gl_FragCoord.xy);
+	int address = (texCoord.x+(viewport.x*texCoord.y));
 	vec3 result = texelFetch(frameTexture, texCoord, 0).rgb;
 	
 	vec3 resultHsv = rgb2hsv(result);
 	vec3 avgHsv = rgb2hsv(vec3(avgPixel/(float(nPixel)*255.)));
 
-	int address = (texCoord.x+(viewport.x*texCoord.y));
-	(resultHsv.z<avgHsv.z)?atomicExchange(mask[nPixel + address], 1):atomicExchange(mask[nPixel + address], 1);
-
+	(resultHsv.z<avgHsv.z)?atomicExchange(mask[nPixel + address], 1):atomicExchange(mask[nPixel + address], 0);
+	/*
+	//atomicExchange(mask[nPixel+ address], 1);
+	if(resultHsv.z<avgHsv.z)
+	{
+		atomicExchange(mask[nPixel+ address], 1);
+	}
+	else
+	{
+		atomicExchange(mask[nPixel+ address], 0);
+	}
+	out_Color = (resultHsv.z<avgHsv.z)?vec4(1.0):vec4(vec3(0.0),1.0);
+	*/
+	
+	discard;
 }

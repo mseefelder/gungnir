@@ -58,4 +58,6 @@ void main()
 		atomicExchange(descriptor[rawRamAddress], 1);
 	}
 
+	discard;
+
 }
