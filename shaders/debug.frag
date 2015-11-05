@@ -88,8 +88,9 @@ void main()
 	if(texCoord.x<=(viewport.x-dimensions.x) && texCoord.y<=(viewport.y-dimensions.y))
 	{
 		thisAddress = texCoord.x + texCoord.y*(viewport.x);
-		//out_Color = vec4(vec3(value),1.0);
-		out_Color = (score[thisAddress]>1)?vec4(1.0):vec4(vec3(0.0),1.0);
+		float value = score[thisAddress]/float(nPixel/3);
+		out_Color = vec4(vec3(value),1.0);
+		//out_Color = (score[thisAddress]>0)?vec4(1.0):vec4(vec3(0.0),1.0);
 	}
 	/**/
 

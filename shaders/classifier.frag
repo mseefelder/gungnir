@@ -2,6 +2,7 @@
 
 uniform ivec2 dimensions;
 uniform ivec2 viewport;
+uniform int ram;
 
 layout (binding = 0) buffer trackInfo
 {
@@ -28,12 +29,7 @@ out vec4 out_Color;
 void main()
 {
 	ivec2 texCoord = ivec2(gl_FragCoord.xy);
-	int thisAddress = texCoord.x + texCoord.y*(viewport.x-dimensions.x);
-	int ram = int(floor(float(thisAddress)/float((viewport.x-dimensions.x)*(viewport.y-dimensions.y))));
-	ivec2 normalizedTexCoord = ivec2(texCoord.x, texCoord.y-(ram*(viewport.y-dimensions.y)));
-	int normalizedAddress = normalizedTexCoord.x + normalizedTexCoord.y*viewport.x;
-
-	/**/
+	int normalizedAddress = texCoord.x + texCoord.y*(viewport.x);
 
 	int codedAddress;
 	bool matches = true;
@@ -43,27 +39,27 @@ void main()
 		codedAddress%dimensions.x,
 		int(floor(codedAddress/float(dimensions.y)))
 		)
-		+ normalizedTexCoord;
+		+ texCoord;
 	int getAddress = getCoord.x + getCoord.y*viewport.x;
-	matches = matches && mask[nPixel+getAddress]==descriptor[3*ram];
+	matches = matches && (mask[nPixel+getAddress]==descriptor[3*ram]);
 
 	codedAddress = mask[3*ram+1];
 	getCoord = ivec2(
 		codedAddress%dimensions.x,
 		int(floor(codedAddress/float(dimensions.y)))
 		)
-		+ normalizedTexCoord;
+		+ texCoord;
 	getAddress = getCoord.x + getCoord.y*viewport.x;
-	matches = matches && mask[nPixel+getAddress]==descriptor[3*ram+1];
+	matches = matches && (mask[nPixel+getAddress]==descriptor[3*ram+1]);
 
 	codedAddress = mask[3*ram+2];
 	getCoord = ivec2(
 		codedAddress%dimensions.x,
 		int(floor(codedAddress/float(dimensions.y)))
 		)
-		+ normalizedTexCoord;
+		+ texCoord;
 	getAddress = getCoord.x + getCoord.y*viewport.x;
-	matches = matches && mask[nPixel+getAddress]==descriptor[3*ram+2];
+	matches = matches && (mask[nPixel+getAddress]==descriptor[3*ram+2]);
 
 	if(matches)
 		atomicAdd(score[normalizedAddress],1);

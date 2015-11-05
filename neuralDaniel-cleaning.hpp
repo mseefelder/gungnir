@@ -145,6 +145,11 @@ public:
         //score = new ShaderStorageBufferInt(scoreBufferSize);
         score = new ShaderStorageBufferInt(frameViewport[0]*frameViewport[1]);
 
+        GLint dims[2];
+        glGetIntegerv(GL_MAX_VIEWPORT_DIMS, &dims[0]);
+        std::cout<<"Max viewport dims"<<dims[0]<<"x"<<dims[1]<<std::endl;
+        std::cout<<"Trying           "<<(frameViewport[0]-regionDimensions[0])<<"x"<<(frameViewport[1]-regionDimensions[1])*NRAM<<std::endl;
+
         Tucano::Misc::errorCheckFunc(__FILE__, __LINE__);
     }
 
@@ -208,13 +213,19 @@ public:
     {
         //glViewport(0, 0, frameViewport[0]-regionDimensions[0], frameViewport[1]-regionDimensions[1]);
         glViewport(0, 0, (frameViewport[0]-regionDimensions[0]), 
-            (frameViewport[1]-regionDimensions[1])*NRAM);
+            (frameViewport[1]-regionDimensions[1]));
         classifierShader.bind();
 
         classifierShader.setUniform("dimensions", regionDimensions);
         classifierShader.setUniform("viewport", frameViewport);
 
-        quad.render();
+        GLint ram = classifierShader.getUniformLocation("ram");
+        for (int i = 0; i < NRAM; ++i)
+        {
+            classifierShader.setUniform(ram, i);
+            quad.render();
+        }
+
         classifierShader.unbind();
         glViewport(0, 0, frameViewport[0], frameViewport[1]);
     }
