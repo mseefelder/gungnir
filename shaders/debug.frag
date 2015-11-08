@@ -3,6 +3,7 @@
 uniform sampler2D frameTexture;
 uniform ivec2 dimensions;
 uniform ivec2 viewport;
+uniform ivec2 SWsize;
 
 layout (binding = 0) buffer trackInfo
 {
@@ -84,14 +85,14 @@ void main()
 
 	//render score
 	/**/
-	out_Color = vec4(vec3(1.0,0.0,0.0),1.0);
-	if(texCoord.x<=(viewport.x-dimensions.x) && texCoord.y<=(viewport.y-dimensions.y))
-	{
+	//out_Color = vec4(vec3(1.0,0.0,0.0),1.0);
+	//if(texCoord.x<=SWsize.x && texCoord.y<=SWsize.y)
+	//{
 		thisAddress = texCoord.x + texCoord.y*(viewport.x);
 		float value = score[thisAddress]/float(nPixel/3);
 		out_Color = vec4(vec3(value),1.0);
 		//out_Color = (score[thisAddress]>0)?vec4(1.0):vec4(vec3(0.0),1.0);
-	}
+	//}
 	/**/
 
 	//out_Color = (resultHsv.z<avgHsv.z)?vec4(1.0):vec4(0.,0.,0.,1.);

@@ -1,10 +1,11 @@
 #version 430
 
-uniform ivec2 dimensions;
-uniform ivec2 thisSize;
-uniform ivec2 viewport;
+uniform ivec2 SWsize; //in pixel
+uniform ivec2 SWcorner; //in frame coords
+uniform ivec2 totalSize; //of SWsize.x*ROIsize.x x ...
+uniform ivec2 frameSize;//in pixels
+uniform ivec2 ROIsize;// in pixels
 uniform int rambits;
-//uniform ivec2 cornerSR; //for fixed size
 
 layout (binding = 0) buffer trackInfo
 {
@@ -29,10 +30,10 @@ out vec4 out_Color;
 
 ivec2 decodeAddress(int coded)
 {
-	int a = coded%dimensions.x;
+	int a = coded%ROIsize.x;
 	return ivec2(
 		a,
-		(coded-a)/dimensions.x
+		(coded-a)/ROIsize.x
 		);
 }
 
@@ -40,39 +41,33 @@ ivec2 decodeAddress(int coded)
 void main()
 {
 	ivec2 texCoord = ivec2(gl_FragCoord.xy);
-	int index = texCoord.x + (texCoord.y * thisSize.x);
+	int index = texCoord.x + (texCoord.y * totalSize.x);
 	
 	int a, b, ram, total;
-	total = thisSize.x*thisSize.y;
-	a = (index%total)%thisSize.x;
-	b = ((index%total)-a)/thisSize.x;
-	ram = ((index-a)-(b*thisSize.x))/total;
+	total = SWsize.x*SWsize.y;
+	a = (index%total)%SWsize.x; //mapped to search window  coordinates
+	b = ((index%total)-a)/SWsize.x; //mapped to search window coordinates
+	ram = ((index-a)-(b*SWsize.x))/total;
 	
-	ivec2 pointZero = ivec2(a,b);
-	//pointZero = pointZero + cornerSR; //for fixed size 
+	ivec2 thisRegionCornerInSW = ivec2(a,b); 
+	ivec2 thisRegionCorner = thisRegionCornerInSW + SWcorner;//mapped to frame coordinates
 	
 	bool matches = true;
+	ivec2 bitSearchCoord = ivec2(0);
+	int bitSearchIndex = 0;
+	int i = 0;
 
-	ivec2 getCoord = pointZero + decodeAddress(mask[rambits*ram]);
-	int getAddress = getCoord.x + getCoord.y*viewport.x;
-	matches = matches && (mask[(2*nPixel)+getAddress] == descriptor[rambits*ram]);
-
-	getCoord = pointZero + decodeAddress(mask[(rambits*ram)+1]);
-	getAddress = getCoord.x + getCoord.y*viewport.x;
-	matches = matches && (mask[(2*nPixel)+getAddress] == descriptor[(rambits*ram)+1]);
-
-	getCoord = pointZero + decodeAddress(mask[(rambits*ram)+2]);
-	getAddress = getCoord.x + getCoord.y*viewport.x;
-	matches = matches && (mask[(2*nPixel)+getAddress] == descriptor[(rambits*ram)+2]);
-
-	getCoord = pointZero + decodeAddress(mask[(rambits*ram)+2]);
-	getAddress = getCoord.x + getCoord.y*viewport.x;
-	matches = matches && (mask[(2*nPixel)+getAddress] == descriptor[(rambits*ram)+2]);
+	for(i=0;i<rambits;i++)
+	{
+		ivec2 bitSearchCoord = decodeAddress(mask[(ram*rambits)+i]) + thisRegionCorner; //mapped to frame coordinates
+																					//moves corner to searched bit
+		int bitSearchIndex = bitSearchCoord.x + bitSearchCoord.y*frameSize.x; //mapped to binarized frame array
+		matches = matches && (mask[(2*nPixel)+bitSearchIndex]==descriptor[(ram*rambits)+i]);		
+	}
 
 	if(matches){
-		int fullAddress = pointZero.x + (pointZero.y*(viewport.x-dimensions.x));
-		//int fullAddress = pointZero.x + (pointZero.y*viewport.x);
-		atomicAdd(score[fullAddress],1);
+		int addIndex = thisRegionCornerInSW.x + thisRegionCornerInSW.y*SWsize.x;
+		atomicAdd(score[addIndex],1);
 	}
 
 	discard;

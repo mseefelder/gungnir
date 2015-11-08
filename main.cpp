@@ -3,7 +3,7 @@
 #include <iostream>
 #include <tucano.hpp>
 #include <thread>
-#include <trackerwindow.hpp>
+#include <trackerwindow-neural.hpp>
 #include "GLFW/glfw3.h"
 
 #ifdef THREAD

@@ -47,7 +47,7 @@ void main()
 	vec3 resultHsv = rgb2hsv(result);
 	vec3 avgHsv = rgb2hsv(vec3(avgPixel/(float(nPixel)*255.)));
 
-	(resultHsv.z<avgHsv.z)?atomicExchange(mask[nPixel + address], 1):atomicExchange(mask[nPixel + address], 0);
+	(resultHsv.z<avgHsv.z)?atomicExchange(mask[(2*nPixel) + address], 1):atomicExchange(mask[(2*nPixel) + address], 0);
 	/*
 	//atomicExchange(mask[nPixel+ address], 1);
 	if(resultHsv.z<avgHsv.z)

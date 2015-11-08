@@ -2,7 +2,6 @@
 #define __MEANSHIFT___
 
 #include <tucano.hpp>
-#include <tucano.hpp>
 
 #define RAMBITS 4
 //#define DEBUGVIEW
@@ -25,6 +24,7 @@ public:
         trackInfo = NULL;
         maskAndFrame = NULL;
         score = NULL;
+        dummyFbo = NULL;
         NRAM = 0;
     }
 
@@ -42,7 +42,7 @@ public:
         loadShader(binConstantShader, "binarize");
         loadShader(binarizeShader, "binFrame");
         loadShader(descriptorShader, "descriptor");
-        loadShader(classifierShader, "classifier");
+        loadShader(classifierShader, "classifier-new");
         loadShader(debugShader, "debug");
 
         //flags
@@ -54,9 +54,10 @@ public:
         quad.createQuad();
     }
 
-    virtual void setRegionDimensionsAndCenter (Eigen::Vector2i viewport, Eigen::Vector2i firstCorner, Eigen::Vector2i spread)
+    virtual void setRegionDimensionsAndCenter (Eigen::Vector2i viewport, Eigen::Vector2i firstCorner, Eigen::Vector2i spread, int nRegions)
     {
         frameViewport = viewport;
+        numRegions = nRegions;
         std::cout<<"fC = "<<firstCorner[0]<<", "<<firstCorner[1]<<"; \n spread = "<<spread[0]<<" ,"<<spread[1]<<"; \n viewport = "<<viewport[0]<<", "<<viewport[1]<<";"<<std::endl;
 
         lowerCorner = Eigen::Vector2i(
@@ -145,18 +146,25 @@ public:
         trackInfo = new ShaderStorageBufferInt(6+numPixels);
         maskAndFrame = new ShaderStorageBufferInt(maskBufferSize, mask);
 
-        int scoreBufferSize = ((frameViewport[0]-regionDimensions[0])*(frameViewport[1]-regionDimensions[1]));
-        //score = new ShaderStorageBufferInt(scoreBufferSize);
-        score = new ShaderStorageBufferInt(frameViewport[0]*frameViewport[1]);
 
         GLint dims[2];
         glGetIntegerv(GL_MAX_VIEWPORT_DIMS, &dims[0]);
         std::cout<<"Max viewport dims"<<dims[0]<<"x"<<dims[1]<<std::endl;
 
+        searchWindowDimensions = Eigen::Vector2i(
+            regionDimensions[0]*numRegions,
+            regionDimensions[0]*numRegions
+            );
+
+        int scoreBufferSize = (searchWindowDimensions[0]*searchWindowDimensions[1]);
+        score = new ShaderStorageBufferInt(scoreBufferSize);
+        
         int classifyX, classifyY;
+        classifyX = searchWindowDimensions[0]*(regionDimensions[0]/2);
+        classifyY = searchWindowDimensions[1]*(regionDimensions[1]/2);
+        /**
         classifyX = (frameViewport[0]-regionDimensions[0])*regionDimensions[0];
         classifyY = (frameViewport[1]-regionDimensions[1])*regionDimensions[1];
-        /**/
         float divider = sqrt(float(RAMBITS));
         if(classifyX>=classifyY)
             classifyX = int(ceil(classifyX/divider));
@@ -165,6 +173,8 @@ public:
         /**/
         classifierSize = Eigen::Vector2i(classifyX, classifyY);
         std::cout<<"Trying           "<<classifierSize[0]<<"x"<<classifierSize[1]<<std::endl;
+
+        dummyFbo = new Tucano::Framebuffer(classifierSize[0], classifierSize[1], 1, GL_TEXTURE_2D, GL_R8, GL_RED, GL_UNSIGNED_BYTE);
 
         Tucano::Misc::errorCheckFunc(__FILE__, __LINE__);
     }
@@ -230,25 +240,29 @@ public:
         //glViewport(0, 0, frameViewport[0]-regionDimensions[0], frameViewport[1]-regionDimensions[1]);
         //glViewport(0, 0, (frameViewport[0]-regionDimensions[0]), 
         //    (frameViewport[1]-regionDimensions[1]));
+        dummyFbo->bindRenderBuffer(0);
         glViewport(0, 0, classifierSize[0], classifierSize[1]);
         GLint dims[4];
         glGetIntegerv(GL_VIEWPORT, &dims[0]);
         std::cout<<"Actual viewport size "<<dims[2]<<" "<<dims[3]<<std::endl;
         classifierShader.bind();
 
-        classifierShader.setUniform("dimensions", regionDimensions);
-        classifierShader.setUniform("viewport", frameViewport);
-        classifierShader.setUniform("thisSize", classifierSize);
+        Eigen::Vector2i searchWindowCorner = Eigen::Vector2i(
+            lowerCorner[0]-(searchWindowDimensions[0]/2),
+            lowerCorner[1]-(searchWindowDimensions[1]/2)
+            );
 
+        classifierShader.setUniform("SWsize",searchWindowDimensions);
+        classifierShader.setUniform("SWcorner",searchWindowCorner);
+        classifierShader.setUniform("totalSize",classifierSize);
+        classifierShader.setUniform("frameSize",frameViewport);
+        classifierShader.setUniform("ROIsize",regionDimensions);
+        classifierShader.setUniform("rambits", RAMBITS);
 
-        //GLint ram = classifierShader.getUniformLocation("ram");
-        //for (int i = 0; i < NRAM; ++i)
-        //{
-            //classifierShader.setUniform(ram, i);
-            quad.render();
-        //}
+        quad.render();
 
         classifierShader.unbind();
+        dummyFbo->unbind();
         glViewport(0, 0, frameViewport[0], frameViewport[1]);
     }
 
@@ -259,6 +273,7 @@ public:
         debugShader.setUniform("dimensions", regionDimensions);
         debugShader.setUniform("frameTexture", frame->bind());
         debugShader.setUniform("viewport", frameViewport);
+        debugShader.setUniform("SWsize",searchWindowDimensions);
 
         quad.render();
         debugShader.unbind();
@@ -270,10 +285,10 @@ public:
         return regionDimensions;
     }
 
-    virtual void firstFrame (Eigen::Vector2i viewport, Eigen::Vector2i firstCorner, Eigen::Vector2i spread, Tucano::Texture* frame, double& frameNorm)
+    virtual void firstFrame (Eigen::Vector2i viewport, Eigen::Vector2i firstCorner, Eigen::Vector2i spread, Tucano::Texture* frame, double& frameNorm, int nRegions)
     {
 
-        setRegionDimensionsAndCenter(viewport, firstCorner, spread);
+        setRegionDimensionsAndCenter(viewport, firstCorner, spread, nRegions);
         trackInfo->clear();
         trackInfo->bindBase(0);
         maskAndFrame->bindBase(1);
@@ -305,15 +320,19 @@ private:
     Tucano::Shader classifierShader;
     Tucano::Shader debugShader;
 
+    Tucano::Framebuffer* dummyFbo;
+
     bool widthIsMax;
     bool isSet;
 
     Eigen::Vector2i regionDimensions;
+    Eigen::Vector2i searchWindowDimensions;
     Eigen::Vector2i center;
     Eigen::Vector2i frameViewport;
     Eigen::Vector2i lowerCorner;
     Eigen::Vector2i classifierSize;
 
+    int numRegions;
     int lineSize;
     int NRAM;
 
