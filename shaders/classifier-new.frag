@@ -69,6 +69,8 @@ void main()
 		int addIndex = thisRegionCornerInSW.x + thisRegionCornerInSW.y*SWsize.x;
 		atomicAdd(score[addIndex],1);
 	}
+	
+	memoryBarrier();
 
 	discard;
 }

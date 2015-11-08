@@ -137,11 +137,6 @@ public:
         {
             mask[mask[i]+numPixels] = i;
         }
-        for (int i = 0; i < numPixels; ++i)
-        {
-            std::cout<<mask[i]<<", ";
-        }
-        std::cout<<std::endl;
 
         trackInfo = new ShaderStorageBufferInt(6+numPixels);
         maskAndFrame = new ShaderStorageBufferInt(maskBufferSize, mask);
@@ -242,9 +237,9 @@ public:
         //    (frameViewport[1]-regionDimensions[1]));
         dummyFbo->bindRenderBuffer(0);
         glViewport(0, 0, classifierSize[0], classifierSize[1]);
-        GLint dims[4];
-        glGetIntegerv(GL_VIEWPORT, &dims[0]);
-        std::cout<<"Actual viewport size "<<dims[2]<<" "<<dims[3]<<std::endl;
+        //GLint dims[4];
+        //glGetIntegerv(GL_VIEWPORT, &dims[0]);
+        //std::cout<<"Actual viewport size "<<dims[2]<<" "<<dims[3]<<std::endl;
         classifierShader.bind();
 
         Eigen::Vector2i searchWindowCorner = Eigen::Vector2i(
@@ -309,7 +304,45 @@ public:
         trackInfo->unbindBase();
         maskAndFrame->unbindBase();
         score->unbindBase();
-        //maskAndFrame->printBuffer();
+
+        int* scores;
+        int maxIndex = 0;
+        int maxValue = 0;
+        int equalcounter = 0;
+        int lastSize = 0;
+        int arraySize = searchWindowDimensions[0]*searchWindowDimensions[1];
+        score->readBuffer(&scores);
+        for (int i = 0; i < arraySize; ++i)
+        {
+            if(scores[i] > maxValue)
+            {
+                equalcounter = 0;
+                maxValue = scores[i];
+                maxIndex = i;
+                lastSize = abs((arraySize/2)-i);
+            }
+            else if(scores[i] == maxValue)
+            {
+                int size = abs((arraySize/2)-i);
+                if (size<lastSize)
+                {
+                    maxIndex = i;
+                }
+                equalcounter++;
+            }
+        }
+        std::cout<<"Best candidate: "<<maxIndex<<", with score: "<<(maxValue/float(NRAM))<<" | "<<equalcounter<<" copies..."<<std::endl;
+        Eigen::Vector2i searchWindowCorner = Eigen::Vector2i(
+            lowerCorner[0]-(searchWindowDimensions[0]/2),
+            lowerCorner[1]-(searchWindowDimensions[1]/2)
+            );
+        int x = maxIndex%searchWindowDimensions[0];
+        Eigen::Vector2i candidateCorner = Eigen::Vector2i(
+            x,
+            (maxIndex-x)/searchWindowDimensions[0]);
+        *firstCorner = searchWindowCorner + candidateCorner;
+        *spread = *firstCorner + regionDimensions;
+
     }
 
 private:

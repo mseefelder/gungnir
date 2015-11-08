@@ -49,8 +49,10 @@ void main()
 	ivec2 texCoord = ivec2(gl_FragCoord.xy);
 	int thisAddress = texCoord.x + texCoord.y*viewport.x;
 	
-	/**
 	vec3 result = texelFetch(frameTexture, texCoord, 0).rgb;
+
+	out_Color = vec4(result, 1.0);
+	/**
 	vec3 resultHsv = rgb2hsv(result);
 	
 	vec3 avgHsv = rgb2hsv(vec3(avgPixel/(float(nPixel)*255.)));
@@ -84,15 +86,10 @@ void main()
 	**/
 
 	//render score
-	/**/
-	//out_Color = vec4(vec3(1.0,0.0,0.0),1.0);
-	//if(texCoord.x<=SWsize.x && texCoord.y<=SWsize.y)
-	//{
-		thisAddress = texCoord.x + texCoord.y*(viewport.x);
-		float value = score[thisAddress]/float(nPixel/3);
-		out_Color = vec4(vec3(value),1.0);
-		//out_Color = (score[thisAddress]>0)?vec4(1.0):vec4(vec3(0.0),1.0);
-	//}
+	/**
+	thisAddress = texCoord.x + texCoord.y*(SWsize.x);
+	float value = score[thisAddress]/float(nPixel/3);
+	out_Color = vec4(vec3(value),1.0);
 	/**/
 
 	//out_Color = (resultHsv.z<avgHsv.z)?vec4(1.0):vec4(0.,0.,0.,1.);
