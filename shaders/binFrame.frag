@@ -6,9 +6,7 @@ uniform ivec2 viewport;
 
 layout (binding = 0) buffer trackInfo
 {
-	int nRam;
 	int nPixel;
-	int nope;
 	ivec3 avgPixel;
 	int maskDescriptor[];
 };

@@ -7,9 +7,7 @@ uniform ivec2 SWsize;
 
 layout (binding = 0) buffer trackInfo
 {
-	int nRam;
 	int nPixel;
-	int avgLuminance;
 	ivec3 avgPixel;
 	int descriptor[];
 };
@@ -49,9 +47,9 @@ void main()
 	ivec2 texCoord = ivec2(gl_FragCoord.xy);
 	int thisAddress = texCoord.x + texCoord.y*viewport.x;
 	
-	vec3 result = texelFetch(frameTexture, texCoord, 0).rgb;
+	//vec3 result = texelFetch(frameTexture, texCoord, 0).rgb;
 
-	out_Color = vec4(result, 1.0);
+	//out_Color = vec4(result, 1.0);
 	/**
 	vec3 resultHsv = rgb2hsv(result);
 	
@@ -88,6 +86,12 @@ void main()
 	//render score
 	/**
 	thisAddress = texCoord.x + texCoord.y*(SWsize.x);
+	float value = score[thisAddress]/float(nPixel/3);
+	out_Color = vec4(vec3(value),1.0);
+	/**/
+
+	//render score FULL
+	/**/
 	float value = score[thisAddress]/float(nPixel/3);
 	out_Color = vec4(vec3(value),1.0);
 	/**/

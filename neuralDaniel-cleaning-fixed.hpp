@@ -108,7 +108,6 @@ public:
         }
 
         int maskBufferSize = ((2*numPixels)+(frameViewport[0]*frameViewport[1]));
-                //+((frameViewport[0]-regionDimensions[0])*(frameViewport[1]-regionDimensions[1])));
 
         int mask[maskBufferSize];
         std::random_device rd; // obtain a random number from hardware
@@ -138,18 +137,15 @@ public:
             mask[mask[i]+numPixels] = i;
         }
 
-        trackInfo = new ShaderStorageBufferInt(6+numPixels);
+        trackInfo = new ShaderStorageBufferInt(4+numPixels);
         maskAndFrame = new ShaderStorageBufferInt(maskBufferSize, mask);
-
-
-        GLint dims[2];
-        glGetIntegerv(GL_MAX_VIEWPORT_DIMS, &dims[0]);
-        std::cout<<"Max viewport dims"<<dims[0]<<"x"<<dims[1]<<std::endl;
 
         searchWindowDimensions = Eigen::Vector2i(
             regionDimensions[0]*numRegions,
             regionDimensions[0]*numRegions
             );
+
+        std::cout<<"Search window dimensions: "<<searchWindowDimensions[0]<<", "<<searchWindowDimensions[1]<<std::endl;
 
         int scoreBufferSize = (searchWindowDimensions[0]*searchWindowDimensions[1]);
         score = new ShaderStorageBufferInt(scoreBufferSize);
@@ -157,17 +153,7 @@ public:
         int classifyX, classifyY;
         classifyX = searchWindowDimensions[0]*(regionDimensions[0]/2);
         classifyY = searchWindowDimensions[1]*(regionDimensions[1]/2);
-        /**
-        classifyX = (frameViewport[0]-regionDimensions[0])*regionDimensions[0];
-        classifyY = (frameViewport[1]-regionDimensions[1])*regionDimensions[1];
-        float divider = sqrt(float(RAMBITS));
-        if(classifyX>=classifyY)
-            classifyX = int(ceil(classifyX/divider));
-        else if(classifyY>classifyX)
-            classifyY = int(ceil(classifyY/divider));
-        /**/
         classifierSize = Eigen::Vector2i(classifyX, classifyY);
-        std::cout<<"Trying           "<<classifierSize[0]<<"x"<<classifierSize[1]<<std::endl;
 
         dummyFbo = new Tucano::Framebuffer(classifierSize[0], classifierSize[1], 1, GL_TEXTURE_2D, GL_R8, GL_RED, GL_UNSIGNED_BYTE);
 
@@ -294,24 +280,26 @@ public:
 
     virtual void track (Tucano::Texture* frame, Eigen::Vector2i* firstCorner, Eigen::Vector2i* spread, int itermax, double& frameNorm)
     {
-        score->clear();
         trackInfo->bindBase(0);
         maskAndFrame->bindBase(1);
-        score->bindBase(2);
         binarize(frame, *firstCorner, *spread);
+        score->clear();
+        score->bindBase(2);
         classify(frame, *firstCorner, *spread);
         debug(frame, *firstCorner, *spread);
         trackInfo->unbindBase();
         maskAndFrame->unbindBase();
         score->unbindBase();
 
-        int* scores;
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
         int maxIndex = 0;
         int maxValue = 0;
         int equalcounter = 0;
         int lastSize = 0;
         int arraySize = searchWindowDimensions[0]*searchWindowDimensions[1];
         score->readBuffer(&scores);
+        //std::cout<<"["<<std::endl;
         for (int i = 0; i < arraySize; ++i)
         {
             if(scores[i] > maxValue)
@@ -319,19 +307,21 @@ public:
                 equalcounter = 0;
                 maxValue = scores[i];
                 maxIndex = i;
-                lastSize = abs((arraySize/2)-i);
+                //lastSize = abs((arraySize/2)-i);
             }
             else if(scores[i] == maxValue)
             {
-                int size = abs((arraySize/2)-i);
-                if (size<lastSize)
-                {
-                    maxIndex = i;
-                }
+                //int size = abs((arraySize/2)-i);
+                //if (size<lastSize)
+                //{
+                //    maxIndex = i;
+                //}
                 equalcounter++;
             }
+            //std::cout<<scores[i]<<", ";
         }
-        std::cout<<"Best candidate: "<<maxIndex<<", with score: "<<(maxValue/float(NRAM))<<" | "<<equalcounter<<" copies..."<<std::endl;
+        //std::cout<<"] \n \n \n \n \n"<<std::endl;
+        std::cout<<"Best candidate: "<<maxIndex<<", with score: "<<maxValue<<" of "<<NRAM<<" | "<<equalcounter<<" copies..."<<std::endl;
         Eigen::Vector2i searchWindowCorner = Eigen::Vector2i(
             lowerCorner[0]-(searchWindowDimensions[0]/2),
             lowerCorner[1]-(searchWindowDimensions[1]/2)
@@ -342,6 +332,18 @@ public:
             (maxIndex-x)/searchWindowDimensions[0]);
         *firstCorner = searchWindowCorner + candidateCorner;
         *spread = *firstCorner + regionDimensions;
+
+        /*
+        if ((maxValue/float(NRAM)) < 0.5)
+        {
+            trackInfo->clear();
+            trackInfo->bindBase(0);
+            maskAndFrame->bindBase(1);
+            generateDescriptor(frame, *firstCorner, *spread);
+            trackInfo->unbindBase();
+            maskAndFrame->unbindBase();
+        }
+        */
 
     }
 
@@ -368,6 +370,8 @@ private:
     int numRegions;
     int lineSize;
     int NRAM;
+
+    int* scores;
 
     ShaderStorageBufferInt* trackInfo;
     ShaderStorageBufferInt* maskAndFrame;

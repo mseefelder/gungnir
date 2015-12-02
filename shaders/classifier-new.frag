@@ -9,9 +9,7 @@ uniform int rambits;
 
 layout (binding = 0) buffer trackInfo
 {
-	int nRam;
 	int nPixel;
-	int nope;
 	ivec3 avgPixel;
 	int descriptor[];
 };
@@ -42,14 +40,15 @@ void main()
 {
 	ivec2 texCoord = ivec2(gl_FragCoord.xy);
 	int index = texCoord.x + (texCoord.y * totalSize.x);
-	
 	int a, b, ram, total;
 	total = SWsize.x*SWsize.y;
+	
 	a = (index%total)%SWsize.x; //mapped to search window  coordinates
 	b = ((index%total)-a)/SWsize.x; //mapped to search window coordinates
-	ram = ((index-a)-(b*SWsize.x))/total;
 	
 	ivec2 thisRegionCornerInSW = ivec2(a,b); 
+	/*
+	ram = ((index-a)-(b*SWsize.x))/total;
 	ivec2 thisRegionCorner = thisRegionCornerInSW + SWcorner;//mapped to frame coordinates
 	
 	bool matches = true;
@@ -64,12 +63,19 @@ void main()
 		int bitSearchIndex = bitSearchCoord.x + bitSearchCoord.y*frameSize.x; //mapped to binarized frame array
 		matches = matches && (mask[(2*nPixel)+bitSearchIndex]==descriptor[(ram*rambits)+i]);		
 	}
+	*/
 
-	if(matches){
-		int addIndex = thisRegionCornerInSW.x + thisRegionCornerInSW.y*SWsize.x;
-		atomicAdd(score[addIndex],1);
-	}
-	
+	//if(matches){
+		//int addIndex = thisRegionCornerInSW.x + (thisRegionCornerInSW.y*SWsize.x);
+		int addIndex = index%total;
+		if(addIndex<total)
+		{
+			//atomicAdd(score[addIndex],1);
+			atomicExchange(score[addIndex],1);
+		}
+		//atomicAdd(score[addIndex],1);
+	//}
+
 	memoryBarrier();
 
 	discard;
