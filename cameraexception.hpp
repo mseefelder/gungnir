@@ -8,3 +8,11 @@ class cameraException: public exception
     return "No working camera found!";
   }
 };
+
+class targetException: public exception
+{
+	virtual const char* what() const throw()
+	{
+		return "Invalid target size!";
+	}
+};
