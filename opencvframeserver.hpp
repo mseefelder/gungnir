@@ -4,7 +4,7 @@
 #include <GL/glew.h>
 #include <texture.hpp>
 
-#include <cameraexception.hpp>
+#include "exceptions.hpp"
 #include <Eigen/Dense>
 
 using namespace std;

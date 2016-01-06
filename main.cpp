@@ -2,11 +2,11 @@
 
 #include <iostream>
 #include <tucano.hpp>
-#include <thread>
-#include <trackerwindow-neural.hpp>
+#include <trackerwindow-wisard.hpp>
 #include "GLFW/glfw3.h"
 
 #ifdef THREAD
+#include <thread>
 #include <threadedopencvframeserver.hpp>
 #else
 #include <opencvframeserver.hpp>

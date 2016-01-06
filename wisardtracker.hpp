@@ -2,6 +2,7 @@
 #define __WISARD___
 
 #include <tucano.hpp>
+#include "exceptions.hpp"
 
 #define RAMBITS 4 //work with 4 bit RAM
 //#define DEBUGVIEW
@@ -28,10 +29,15 @@ public:
 	~Wisard() 
 	{}
 
+	virtual void initialize()
+	{
+		return;
+	}
+
 	/**
 	*@brief Must be called for the first frame of tracking, instead of track()
 	*/
-	virtual void startTracking(Eigen::Vector2i &viewportDimensions, Eigen::Vector2i &targetLowerCorner, Eigen::Vector2i &targetDimensions, int numberSearchRegions)
+	virtual void startTracking(Eigen::Vector2i &viewportDimensions, Eigen::Vector2i &targetLowerCorner, Eigen::Vector2i &targetDimensions, Tucano::Texture* frame, int numberSearchRegions)
 	{
 		setup(viewportDimensions, targetLowerCorner, targetDimensions, numberSearchRegions);
 		generateBinarizationConstant();
@@ -41,7 +47,7 @@ public:
 	/**
 	*@brief Track previous frame's target in current frame
 	*/
-	virtual track(Eigen::Vector2i &targetLocation)
+	virtual void track(Eigen::Vector2i &targetLocation)
 	{
 		binarizeFrame();
 		classifyCandidates();
@@ -107,12 +113,12 @@ private:
 			delete dummyFbo;
 		}
 		//Create new
-		dummyFbo = new Tucano::Framebuffer(tragetSpread[0]*numberSearchRegions, targetSpread[1]*numberSearchRegions, 1, GL_TEXTURE_2D, GL_R8, GL_RED, GL_UNSIGNED_BYTE);
+		dummyFbo = new Tucano::Framebuffer(targetSpread[0]*numberSearchRegions, targetSpread[1]*numberSearchRegions, 1, GL_TEXTURE_2D, GL_R8, GL_RED, GL_UNSIGNED_BYTE);
 
 		//Create masks
 		try
 		{
-			createDiscriminatorMask();
+			createDiscriminatorMask(true);
 		}
 		catch (exception& e)
         {
@@ -184,7 +190,7 @@ private:
             while(currIndex<0)
             {
                 mistery++;
-                if(mistery>=numPixels)
+                if(mistery>=numberPixels)
                     mistery = 0;
                 currIndex = indexes[mistery];
             }
@@ -195,15 +201,15 @@ private:
 
         if (debug)
         {
-        	std::cout<<" discriminatorMask: ["
+        	std::cout<<" discriminatorMask: [";
         	for (int i = 0; i < numberPixels; ++i)
         	{
-        		std::cout<<discriminatorMask[i]<<", "
+        		std::cout<<discriminatorMask[i]<<", ";
         	}
         	std::cout<<"] \n inverseDiscriminatorMask: [";
         	for (int i = 0; i < numberPixels; ++i)
         	{
-        		std::cout<<inverseDiscriminatorMask[i]<<", "
+        		std::cout<<inverseDiscriminatorMask[i]<<", ";
         	}
         	std::cout<<"]"<<std::endl;
         }
@@ -216,34 +222,44 @@ private:
 	*Does it on shader, final result is storing a binarization constant on a shader storage buffer
 	*/
 	virtual void generateBinarizationConstant()
-	{}
+	{
+		return;
+	}
 
 	/**
 	*@brief For each pixel, if luminance > binarization contstant: white; else: black
 	*Does it on shader, final result is filling the shader storage buffer with the binarized frame
 	*/
 	virtual void binarizeFrame()
-	{}
+	{
+		return;
+	}
 
 	/**
 	*@brief Create descriptor for target to be followed
 	*Does it on shader, uses the descriptor mask to create a descriptor based on the binarized target
 	*/
 	virtual void createDiscriminator()
-	{}
+	{
+		return;
+	}
 
 	/**
 	*@brief Attributes a score to each candidate in the search region
 	*Does it on shader
 	*/
 	virtual void classifyCandidates()
-	{}
+	{
+		return;
+	}
 
 	/**
 	*@brief After classifying the candidates, returns the new target location
 	*/
 	virtual void findTarget (Eigen::Vector2i &targetLocation)
-	{}
+	{
+		return;
+	}
 
 };
 
